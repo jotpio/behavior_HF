@@ -4,33 +4,38 @@ import json
 
 class PositionClient():
     def __init__(self):
-        print("POSSERVER: Starting position server!")
-        # super(TCPDummyServer, self).__init__()
+        print("POSCLIENT: Starting position client!")
+
         self.host = "127.0.0.1"
         self.port = 13000
         self.socket = socket(AF_INET, SOCK_STREAM)
-        self.conn = None
+        self.server_address = (self.host, self.port)
+        self.connected=False
 
     def run_thread(self):
-        try:
-            print("POSSERVER: Started Thread!")
-            self.socket.bind((self.host, self.port))
-            self.socket.listen()
-            self.conn, address = self.socket.accept()
-            print(f'POSSERVER: Server connected by {address}')
-
-            while True:
+        print("POSCLIENT: Started Thread!")
+        while not self.connected:
+            try:
+                self.socket = socket(AF_INET, SOCK_STREAM)
+                self.socket.connect(self.server_address)
+                self.connected = True
+                print('POSCLIENT: Connecting to %s port %s' % self.server_address)
+            except Exception as e:
+                pass #Do nothing, just try again
+            while self.connected:
                 try: 
-                    continue
+                    self.socket.recv(128)
                 except:
-                    print("POSSERVER: Socket closed!")
+                    print("POSCLIENT: Socket closed!")
+                    self.connected = False
+                    self.socket = None
                     break
-                
-        finally:
-            print('SERVER: Closing socket')
-            self.socket.close()
 
     def send_pos(self, pos):
-        if self.conn is not None:
-            print("POSSERVER: sending positions", flush=True)
-            self.conn.sendall(json.dumps(pos).encode('utf-8'))
+        try:
+            if self.connected:
+                print("POSCLIENT: Sending positions", flush=True)
+                dump = json.dumps(pos).encode('utf-8')
+                self.socket.sendall(dump)
+        except:
+            "POSCLIENT: Socket error!"
