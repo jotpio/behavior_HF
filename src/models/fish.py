@@ -1,6 +1,7 @@
 import math, random
 import numpy as np
 from src.models.arena import Arena
+from src.models.agent import Agent
 from PyQt5.QtCore import *
 
 
