@@ -29,8 +29,9 @@ class TCPDummyServer():
                         amount_received = 0
                         while True:
                             amount_received = 0
-                            while amount_received < 4096:
-                                data = self.conn.recv(4096)
+                            while amount_received < 8192:
+                                data = self.conn.recv(8192)
+                                print(data)
                                 data = json.loads(data.decode('utf-8'))
                                 amount_received += len(data)
                                 print('POSSERVER: Received "%s"' % data)

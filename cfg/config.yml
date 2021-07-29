@@ -1,0 +1,28 @@
+DEBUG:
+  console: true
+  visualisation: true
+  
+  #network dummies
+  dummy_joystick_client: true
+
+DEFAULTS:
+  number_of_fish: 5
+  zoa: 200
+  zoo: 80
+  zor: 10
+
+  error_rad: 10
+  max_speed: 10
+  max_turn_rate: 150
+
+  time_step: 0.05 #20fps
+
+ARENA:
+  width: 1000
+  height: 1000
+  repulsion: 150
+
+NETWORK:
+  position_port: 13000
+  command_port: 13001
+  joystick_port: 13002

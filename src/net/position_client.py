@@ -3,11 +3,11 @@ from socket import  *
 import json
 
 class PositionClient():
-    def __init__(self):
+    def __init__(self, config=None):
         print("POSCLIENT: Starting position client!")
-
+        self.config = config
         self.host = "127.0.0.1"
-        self.port = 13000
+        self.port = config['NETWORK']['position_port'] if config is not None else 13000
         self.socket = socket(AF_INET, SOCK_STREAM)
         self.server_address = (self.host, self.port)
         self.connected=False
