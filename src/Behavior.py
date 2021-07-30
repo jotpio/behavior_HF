@@ -28,7 +28,7 @@ try:
 except ImportError:
     import sip
 
-from PyQt5.QtWidgets import QGraphicsEllipseItem, QLayout, QVBoxLayout, QHBoxLayout, QPushButton, QSpinBox, QLabel, QWidget, QApplication, QGraphicsView, QGraphicsScene, QCheckBox
+from PyQt5.QtWidgets import *
 from PyQt5.QtCore import (Qt, pyqtSignal, QObject, QEvent)
 from PyQt5.QtGui import QPen, QBrush, QColor, QPainter
 
@@ -81,18 +81,24 @@ class Behavior(QObject):
 
         # robot
         self.robot = Robot(self.arena, self.config)
+        self.controlled = False
 
         #step logger
         self._step_logger = []
         self.exec_time = 0
         self.exec_stepper = 0
 
-        self.com_queue = queue.Queue()
+        self.com_queue = queue.LifoQueue()
+        self.robo_command = False
 
         #setup debug vis
         if self.debug_vis is not None: self.setup_debug_vis()
 
-        self.installEventFilter(self)
+        #catch key events
+        if self.debug_vis is not None:
+            app = QApplication.instance()
+            app.installEventFilter(self)
+        self.movelist = []
 
     def setup_parameter_layout(self):
         self.app = QApplication(sys.argv)
@@ -198,7 +204,7 @@ class Behavior(QObject):
 
     def on_reset_button_clicked(self):
         val = self.num_fish_spinbox.value()
-        self.com_queue.put((self.reset_fish,val))
+        self.com_queue.put(("reset_fish",val))
         print(f"Reseting positions of fish!")
 
     def on_zone_checkbox_changed(self):
@@ -207,13 +213,52 @@ class Behavior(QObject):
         self.update_ellipses.emit(self.robot, self.allfish)
 
     def on_num_fish_spinbox_valueChanged(self, val):
-        self.com_queue.put((self.reset_fish,val))
+        self.com_queue.put(("reset_fish",val))
         print(f"Setting number of fish to: {val}")
 
-    def eventFilter(self, obj, event):
-        print("event!")
-        if event.type() == QEvent.KeyPress and obj is self:
-            print(event.key)
+    def eventFilter(self, obj, event) -> bool:
+        if event.type() == QEvent.KeyPress and obj is self.debug_vis.viz_window:
+            key = event.key()
+            # new_dir = np.asarray([0,0])
+            if key == Qt.Key_W:
+                self.robot.debug = True
+                self.robot.controlled = True
+                self.joystick_server.debug = True
+                # new_dir += np.asarray([0,-1])
+                self.movelist.append([0,-1])
+                print("W")
+            if key == Qt.Key_A:
+                self.robot.debug = True
+                self.robot.controlled = True
+                self.joystick_server.debug = True
+                # new_dir += np.asarray([-1,0])
+                self.movelist.append([-1,0])
+                print("A")
+            if key == Qt.Key_S:
+                self.robot.debug = True
+                self.robot.controlled = True
+                self.joystick_server.debug = True
+                # new_dir += np.asarray([0,1])
+                self.movelist.append([0,1])
+                print("S")
+            if key == Qt.Key_D:
+                self.robot.debug = True
+                self.robot.controlled = True
+                self.joystick_server.debug = True
+                # new_dir += np.asarray([1,0])
+                self.movelist.append([1,0])
+                print("D")
+            # new_dir = new_dir / np.linalg.norm(new_dir) if np.linalg.norm(new_dir) != 0 else np.asarray([0,0])
+            # self.com_queue.put(("change_robodir", new_dir))
+            # print(new_dir)
+            return True
+        elif event.type() == QEvent.KeyRelease and obj is self.debug_vis.viz_window:
+            self.robot.debug = False
+            self.robot.controlled = self.controlled
+            self.joystick_server.debug = False
+            return True
+
+        return False
 
     def supported_timesteps(self):
         return []
@@ -230,17 +275,37 @@ class Behavior(QObject):
         # print("next_speeds")
 
         # Move fish (simulate)
-        # TODO: make fish react with robot
         # start_time = time.time()
 
         #execute all commands queue first
         while not(self.com_queue.empty()):
-             command = self.com_queue.get()
-            #  func = command[0]
-             func = getattr(self, command[0])
-             args = command[1:]
-             func(*args)
-        
+            command = self.com_queue.get()
+            
+            #last movement command is used (LIFO)
+            if (command[0] == "change_robodir"):
+                if not self.robo_command:
+                    func = getattr(self, command[0])
+                    args = command[1:]
+                    func(*args)
+                    self.robo_command = True
+                    # print(command[1:])
+                # else:
+                    # print("already commanded!")
+            else:
+                func = getattr(self, command[0])
+                args = command[1:]
+                func(*args)
+        self.robo_command = False
+
+        #wasd robo movement
+        if self.robot.debug and self.robot.controlled:
+            robomove1 = np.unique(np.asarray(self.movelist), axis=0)
+            robomove2 = np.sum(robomove1, axis=0)
+            robomove3 = robomove2 / np.linalg.norm(robomove2) if np.linalg.norm(robomove2) != 0 else self.robot.dir
+            self.robot.new_dir = robomove3
+            # print(robomove1, robomove2, robomove3)
+        self.movelist = []
+
         #update all fish one time step forward
         all_agents = [self.robot]
         all_agents.extend(self.allfish)
@@ -319,6 +384,7 @@ class Behavior(QObject):
 
     def control_robot(self, flag):
         self.robot.controlled = flag
+        self.controlled = flag
 
     def change_robodir(self, dir):
         self.robot.new_dir = np.asarray(dir)

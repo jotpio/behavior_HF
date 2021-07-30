@@ -5,14 +5,19 @@ class Robot(Agent):
         super().__init__(-1, [100,100], 90, arena, config)
 
         self.controlled = False
+        self.debug = False
         self.battery = 100
     
     def tick(self, fishpos, fishdir, dists):
+        if self.debug:
+            return
         if not self.controlled:
             super().tick(fishpos, fishdir, dists)
     
     def move(self):
-        if not self.controlled:
+        if self.debug:
+            super().move()
+        elif not self.controlled:
             super().move()
         else: 
             super().move()

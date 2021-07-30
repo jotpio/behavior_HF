@@ -41,8 +41,8 @@ class JoystickServer(QObject):
                                 data = json.loads(data.decode('utf-8'))
                                 amount_received += len(data)
                                 # print('JOYSERVER: Received "%s"' % data)
-
-                                self.send_robodir.emit(data)
+                                if not self.debug:
+                                    self.send_robodir.emit(data)
                     except:
                         print("JOYSERVER: Socket error!")
                         break
