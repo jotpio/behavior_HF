@@ -17,6 +17,7 @@ class JoystickServer(QObject):
         self.socket = socket(AF_INET, SOCK_STREAM)
         self.parent_behavior = parent
         self.send_robodir.connect(self.parent_behavior.change_robodir, Qt.QueuedConnection)
+        self.debug = False
 
     def run_thread(self):
         print("JOYSERVER: Started Thread!")

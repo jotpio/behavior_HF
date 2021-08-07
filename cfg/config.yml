@@ -18,11 +18,14 @@ DEFAULTS:
   time_step: 0.05 #20fps
 
 ARENA:
-  width: 1000
-  height: 1000
+  width: 2000
+  height: 2000
   repulsion: 150
 
 NETWORK:
   position_port: 13000
   command_port: 13001
   joystick_port: 13002
+
+ROBOT:
+  controlled_from_start: true

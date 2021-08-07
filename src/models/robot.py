@@ -1,12 +1,14 @@
 from src.models.agent import Agent
+import numpy as np
 
 class Robot(Agent):
     def __init__(self, arena, config):
         super().__init__(-1, [100,100], 90, arena, config)
 
-        self.controlled = False
+        self.controlled = config['ROBOT']['controlled_from_start']
         self.debug = False
         self.battery = 100
+        self.new_dir = np.asarray([0.1,0])
     
     def tick(self, fishpos, fishdir, dists):
         if self.debug:

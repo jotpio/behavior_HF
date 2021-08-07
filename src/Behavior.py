@@ -226,28 +226,28 @@ class Behavior(QObject):
                 self.joystick_server.debug = True
                 # new_dir += np.asarray([0,-1])
                 self.movelist.append([0,-1])
-                print("W")
+                # print("W")
             if key == Qt.Key_A:
                 self.robot.debug = True
                 self.robot.controlled = True
                 self.joystick_server.debug = True
                 # new_dir += np.asarray([-1,0])
                 self.movelist.append([-1,0])
-                print("A")
+                # print("A")
             if key == Qt.Key_S:
                 self.robot.debug = True
                 self.robot.controlled = True
                 self.joystick_server.debug = True
                 # new_dir += np.asarray([0,1])
                 self.movelist.append([0,1])
-                print("S")
+                # print("S")
             if key == Qt.Key_D:
                 self.robot.debug = True
                 self.robot.controlled = True
                 self.joystick_server.debug = True
                 # new_dir += np.asarray([1,0])
                 self.movelist.append([1,0])
-                print("D")
+                # print("D")
             # new_dir = new_dir / np.linalg.norm(new_dir) if np.linalg.norm(new_dir) != 0 else np.asarray([0,0])
             # self.com_queue.put(("change_robodir", new_dir))
             # print(new_dir)
@@ -387,7 +387,9 @@ class Behavior(QObject):
         self.controlled = flag
 
     def change_robodir(self, dir):
-        self.robot.new_dir = np.asarray(dir)
+        np_dir = np.asarray(dir)
+        dir_len = np.linalg.norm(np_dir)
+        self.robot.new_dir = np_dir / dir_len if dir_len != 0 else np.asarray([0,0])
 
     def app_exec(self):
         sys.exit(self.app.exec_())

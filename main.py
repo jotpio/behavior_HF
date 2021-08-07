@@ -20,7 +20,7 @@ class Main():
         print("running behavior / tcp client")
          
         # setup debug visualization
-        self.debug_vis = DebugVisualization() if self.config['DEBUG']['visualisation'] else None
+        self.debug_vis = DebugVisualization(self.config) if self.config['DEBUG']['visualisation'] else None
 
         #behavior
         # run behavior thread

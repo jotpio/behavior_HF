@@ -6,8 +6,10 @@ from PyQt5.QtCore import *
 from src.models.fish import Fish
 
 class DebugVisualization(QObject):
-    def __init__(self):
+    def __init__(self, config):
         super().__init__()
+
+        self.config = config
 
         self.fish_ellipses = []
         self.arena = None
@@ -31,12 +33,12 @@ class DebugVisualization(QObject):
 
         # Visualization
         self.viz_window = QWidget()
-        self.viz_window.setWindowTitle('Visualization window')
+        self.viz_window.setWindowTitle('Visualisation window')
         self.viz_layout = QVBoxLayout()
         self.scene = QGraphicsScene()
         self.view = QGraphicsView(self.scene)
         self.view.setRenderHints(QPainter.Antialiasing | QPainter.SmoothPixmapTransform)
-        self.view.setSceneRect(0,0,1000,1000)
+        self.view.setSceneRect(0,0,self.config['ARENA']['height'],self.config['ARENA']['width'])
         sceneRect = self.view.sceneRect()
         # self.view.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.viz_layout.addWidget(self.view)    
@@ -109,6 +111,15 @@ class DebugVisualization(QObject):
         pen.setWidth(4)
         borders.setPen(pen)
         self.scene.addItem(borders)
+
+        #repulsion zone
+        repulsion = self.config['ARENA']['repulsion']
+        repulsion_zone = QPainterPath()
+        repulsion_zone.addRect(0, 0, arena.width, arena.height)
+        repulsion_zone.addRect(repulsion, repulsion, arena.width - (repulsion*2), arena.height - (repulsion*2))
+        brush = QBrush(QColor(255,0,0,25)) #r g b a
+        self.scene.addPath(repulsion_zone, brush=brush)
+
 
     def change_zones(self, zones):
         self.show_zor = zones[0]

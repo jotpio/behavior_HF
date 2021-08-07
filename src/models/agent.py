@@ -56,7 +56,7 @@ class Agent():
         # print(f"time before arena check: {time.perf_counter() - time_start}", flush=True)    
         arena_points = self.arena.getNearestArenaPoints(pos)
         for point in arena_points: #arena points
-            if point[1] < 150:
+            if point[1] < self.config['ARENA']['repulsion']:
                 points_zor.append(point[0])
         # print(f"time for zone check: {time.perf_counter() - time_start}", flush=True)
 
