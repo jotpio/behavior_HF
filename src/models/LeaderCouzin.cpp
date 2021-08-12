@@ -213,9 +213,9 @@ MotorSpeeds LeaderCouzin::nextSpeeds(const IPose& curPose, IMovement& move, ICon
 	}
 
 
-		if ( zone == "attraction" ) //enum verwenden für zonenbenennung
+		if ( zone == "attraction" ) //enum verwenden fï¿½r zonenbenennung
 		{
-			switch (ATTRACTION) // ToDo: couzin mit ou! move info for attraction einfügen
+			switch (ATTRACTION) // ToDo: couzin mit ou! move info for attraction einfï¿½gen
 			{
 			case 0:
 				emit sendMovement(0);
@@ -244,7 +244,7 @@ MotorSpeeds LeaderCouzin::nextSpeeds(const IPose& curPose, IMovement& move, ICon
 
 		if( zone == "comfort" && _state != 'L' )
 		{
-			switch (COMFORT) //move info comfort einfügen
+			switch (COMFORT) //move info comfort einfï¿½gen
 			{
 			case 0:
 				emit sendMovement(1);//motorSpeed= natural.speeds(curPose, nextPoint, controller);
@@ -262,7 +262,7 @@ MotorSpeeds LeaderCouzin::nextSpeeds(const IPose& curPose, IMovement& move, ICon
 
 		if ( zone == "comfort" && _state == 'L' )
 		{
-			switch (LEADING) //move info wenn in leading mode einfügen
+			switch (LEADING) //move info wenn in leading mode einfï¿½gen
 			{
 			case 0:
 				emit sendMovement(0);//motorSpeed = direct.speeds(curPose, nextPoint, controller);
@@ -320,7 +320,7 @@ cv::Point2f LeaderCouzin::comfort(const IPose& curPose, IController& controller)
 
 
 	//TODO von GUI aus steuerbar
-		if(int _checkRand = 0 && _state == 'F') //rand in probs einfügen und hier verwenden (int an aus)
+		if(int _checkRand = 0 && _state == 'F') //rand in probs einfï¿½gen und hier verwenden (int an aus)
 	{
 		// Timer for state change if random mode is possible. 
 		_stateTimer = clock();
@@ -355,7 +355,7 @@ cv::Point2f LeaderCouzin::comfort(const IPose& curPose, IController& controller)
 
 	double distanceRoboterNearestNeighbour = CvHelper::getDistance(curPose.position_cm(), _fishPoses.at(_nearestNeighbourID).position_cm());
 
-	int _dwellTime = 0; //in probs einfügen und ersetzen
+	int _dwellTime = 0; //in probs einfï¿½gen und ersetzen
 	//a) schwimm direkt zum zielpunkt tankmitte,
 	if( distanceRoboterNearestNeighbour < _roboterComfortZoneRadius && _leadingMode == 0 && _checkTime >= _dwellTime && _state != 'R')
 	{
@@ -385,7 +385,7 @@ cv::Point2f LeaderCouzin::comfort(const IPose& curPose, IController& controller)
 		double ori_rad = _fishPoses.at(_nearestNeighbourID).orientation_rad();
 		cv::Vec2f fishDir(cos(ori_rad), sin(ori_rad));
 		oriDir += fishDir; //Default, senden an gui;
-		cv::Vec2f presentDir(cos(_blindAngle2), sin(_blindAngle2)); //wert von gui //TODO: Winkel überprüfen!!! Ob Grad oder Deg!
+		cv::Vec2f presentDir(cos(_blindAngle2), sin(_blindAngle2)); //wert von gui //TODO: Winkel ï¿½berprï¿½fen!!! Ob Grad oder Deg!
 		//angestrebte richtung
 		presentDir = TargetDist * cv::normalize(presentDir); //original nur oriDir
 
@@ -395,7 +395,7 @@ cv::Point2f LeaderCouzin::comfort(const IPose& curPose, IController& controller)
 	}
 	else if(distanceRoboterNearestNeighbour < _roboterComfortZoneRadius && _leadingMode == 1 && _checkTime <= _dwellTime && _state != 'R')
 	{
-		if(_checkTime <= _dwellTime)//TODO check if unnötig
+		if(_checkTime <= _dwellTime)//TODO check if unnï¿½tig
 		{
 			target = (_fishPoses.at(_nearestNeighbourID).position_cm());
 		}
@@ -441,7 +441,7 @@ cv::Point2f LeaderCouzin::checkRejection(const IPose& curPose, cv::Point2f targe
 	**  If there are fish in the zone of rejection, move away from them.
 	**  d(t + tau) = d_r(t + tau)
 	**/
-	//sollte übernehmbar sein, heißt rejectionzone doch counten
+	//sollte ï¿½bernehmbar sein, heiï¿½t rejectionzone doch counten
 	if (roboterRejectionZoneCount > 0)
 	{
 		std::cout << "Roboter in rejection zone \n";

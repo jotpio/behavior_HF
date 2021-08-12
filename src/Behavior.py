@@ -69,7 +69,8 @@ class Behavior(QObject):
 
         #time step in seconds
         self.time_step = self.config['DEFAULTS']['time_step']
-
+        self.skip_tick = False
+        
         # positions
         self.robot = None
         self.arena = Arena([0,0], self.config['ARENA']['width'], self.config['ARENA']['height'])
@@ -77,7 +78,7 @@ class Behavior(QObject):
         self.zoa = self.config['DEFAULTS']['zoa']
         self.zoo = self.config['DEFAULTS']['zoo']
         self.zor = self.config['DEFAULTS']['zor']
-        self.allfish = [Fish(id = i,  pos=np.asarray([random.randint(1, self.arena.width-1), random.randint(1, self.arena.height-1)]), ori=random.randint(0,360), arena=self.arena, config=self.config) for i in range(self.num_fish_spinbox.value())]
+        self.allfish = [Fish(id = i+1,  pos=np.asarray([random.randint(1, self.arena.width-1), random.randint(1, self.arena.height-1)]), ori=random.randint(0,360), arena=self.arena, config=self.config) for i in range(self.num_fish_spinbox.value())]
 
         # robot
         self.robot = Robot(self.arena, self.config)
@@ -178,14 +179,17 @@ class Behavior(QObject):
         self.zoa_checkbox = QCheckBox("Show zone of attraction")
         self.zoo_checkbox = QCheckBox("Show zone of orientation")
         self.zor_checkbox = QCheckBox("Show zone of repulsion")
+        self.vision_checkbox = QCheckBox("Show vision cone")
 
         self.zoa_checkbox.setChecked(True)
         self.zoo_checkbox.setChecked(True)
         self.zor_checkbox.setChecked(True)
+        self.vision_checkbox.setChecked(False)
 
         self.layout.addWidget(self.zoa_checkbox)
         self.layout.addWidget(self.zoo_checkbox)
         self.layout.addWidget(self.zor_checkbox)
+        self.layout.addWidget(self.vision_checkbox)
 
         #
         self.parent_layout.addLayout(self.layout)
@@ -196,6 +200,7 @@ class Behavior(QObject):
         self.zoa_checkbox.stateChanged.connect(self.on_zone_checkbox_changed, Qt.QueuedConnection)
         self.zoo_checkbox.stateChanged.connect(self.on_zone_checkbox_changed, Qt.QueuedConnection)
         self.zor_checkbox.stateChanged.connect(self.on_zone_checkbox_changed, Qt.QueuedConnection)
+        self.vision_checkbox.stateChanged.connect(self.on_vision_checkbox_changed, Qt.QueuedConnection)
 
     def on_random_target_clicked(self):
         self.target = random.randint(300, 900), random.randint(10, 90)
@@ -210,6 +215,10 @@ class Behavior(QObject):
     def on_zone_checkbox_changed(self):
         zones = [self.zor_checkbox.isChecked(), self.zoo_checkbox.isChecked(), self.zoa_checkbox.isChecked()]
         self.debug_vis.change_zones(zones)
+        self.update_ellipses.emit(self.robot, self.allfish)
+
+    def on_vision_checkbox_changed(self):
+        self.debug_vis.toggle_vision_cones(self.vision_checkbox.isChecked())
         self.update_ellipses.emit(self.robot, self.allfish)
 
     def on_num_fish_spinbox_valueChanged(self, val):
@@ -314,7 +323,14 @@ class Behavior(QObject):
         dist_m = distance_matrix(all_pos, all_pos)
 
         for id_f, f in enumerate(all_agents):
-            f.tick(all_pos, all_dir, dist_m[id_f])
+            if self.config["DEBUG"]["skip_ticks"]:
+                if not self.skip_tick:
+                    f.tick(all_pos, all_dir, dist_m[id_f])
+            else:
+                f.tick(all_pos, all_dir, dist_m[id_f])
+        if self.skip_tick: self.skip_tick = False
+        else: self.skip_tick = True
+
         for f in all_agents:
             f.move()
 
@@ -367,15 +383,19 @@ class Behavior(QObject):
     def serialize(self):
         out=[]
         #robot
-        out.append([np.rint(self.robot.pos).tolist(), np.around(self.robot.ori, decimals=2), self.robot.id])
+        # out.append([np.rint(self.robot.pos).tolist(), np.around(self.robot.ori, decimals=2), self.robot.id])
+        robo_dict = {'id': self.robot.id, 'orientation':  np.around(self.robot.ori, decimals=2), 'position': np.rint(self.robot.pos).tolist()}
+        out.append(robo_dict)
         #fish 
         for a in self.allfish:
-            out.append([np.rint(a.pos).tolist(), np.around(a.ori, decimals=2), a.id])
+            fish_dict = {'id': a.id, 'orientation':  np.around(a.ori, decimals=2), 'position': np.rint(a.pos).tolist()}
+            # out.append([np.rint(a.pos).tolist(), np.around(a.ori, decimals=2), a.id])
+            out.append(fish_dict)
 
         return out
 
     def reset_fish(self, num):
-        self.allfish = [Fish(id = i,  pos=np.asarray([random.randint(1, self.arena.width-1), random.randint(1, self.arena.height-1)]), ori=random.randint(0,360), arena=self.arena, config=self.config) for i in range(num)]
+        self.allfish = [Fish(id = i+1,  pos=np.asarray([random.randint(1, self.arena.width-1), random.randint(1, self.arena.height-1)]), ori=random.randint(0,360), arena=self.arena, config=self.config) for i in range(num)]
         self.update_ellipses.emit(self.robot, self.allfish)
 
     def queue_command(self, command):

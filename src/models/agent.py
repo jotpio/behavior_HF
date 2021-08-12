@@ -14,8 +14,9 @@ class Agent():
         if dir is None:
             rad_ori = np.radians(ori)
             self.dir =  np.asarray([math.cos(rad_ori), math.sin(rad_ori)]) / np.linalg.norm([math.cos(rad_ori), math.sin(rad_ori)])
-
-        self.new_dir = None
+        
+        self.dir_norm = self.dir/np.linalg.norm(self.dir)
+        self.new_dir = np.asarray([0.1,0])
         self.arena = arena
         self.time_step = time_step if time_step!=None else config["DEFAULTS"]["time_step"]
 
@@ -28,6 +29,9 @@ class Agent():
         self.zoa = zoa if zoa!=None else config["DEFAULTS"]["zoa"]
         self.zoo = zoo if zoo!=None else config["DEFAULTS"]["zoo"]
         self.zor = zor if zor!=None else config["DEFAULTS"]["zor"]
+
+        self.vision_angle = config['DEFAULTS']['vision_angle']
+        self.half_vision_cos = np.cos(self.vision_angle/2)
     
     def tick(self, fishpos, fishdir, dists):
         # time_start = time.perf_counter()
@@ -53,12 +57,33 @@ class Agent():
         points_zoo = fishdir[zoo_iarr].tolist() # fish in zoo
         points_zoa = fishpos[zoa_iarr].tolist() # fish in zoa
 
-        # print(f"time before arena check: {time.perf_counter() - time_start}", flush=True)    
+        # print(f"time before arena check: {time.perf_counter() - time_start}", flush=True)
+
+        # check if near arena borders and repulse from nearest border point
         arena_points = self.arena.getNearestArenaPoints(pos)
         for point in arena_points: #arena points
             if point[1] < self.config['ARENA']['repulsion']:
                 points_zor.append(point[0])
         # print(f"time for zone check: {time.perf_counter() - time_start}", flush=True)
+
+        # for each point in radii check if in vision
+        points_zor2 = []
+        for p in points_zor:
+            if self.check_in_vision(p):
+                points_zor2.append(p)
+        points_zor = points_zor2
+
+        points_zoo2 = []
+        for p in points_zoo:
+            if self.check_in_vision(p):
+                points_zoo2.append(p)
+        points_zoo = points_zoo2
+
+        points_zoa2 = []
+        for p in points_zoa:
+            if self.check_in_vision(p):
+                points_zoa2.append(p)
+        points_zoa = points_zoa2
 
         # zone of repulsion (zor)
         n_zor = len(points_zor)
@@ -184,6 +209,7 @@ class Agent():
         new_pos = self.pos + (self.new_dir * self.max_speed)
         self.pos = new_pos
         self.dir = self.new_dir
+        self.dir_norm = self.dir / np.linalg.norm(self.dir)
         #new orientation is orientation of new direction vector
         self.ori = math.degrees(math.atan2(self.dir[1], self.dir[0]))
 
@@ -191,3 +217,22 @@ class Agent():
 
     def check_inside_arena():
         pass
+
+    def check_in_vision(self, point):
+        between_v = np.asarray(self.pos) - np.asarray(point) 
+        between_v_norm = between_v / np.linalg.norm(between_v)
+        dot = np.dot(between_v_norm, self.dir_norm)
+        deg_angle = np.degrees(np.arccos(-dot))
+        # print(deg_angle)
+
+        if deg_angle > self.vision_angle / 2:
+            # print("not in vision")
+
+
+            if dot >= self.half_vision_cos:
+                print("not dot")
+            else:
+                print("dot")
+            return False
+
+        return True

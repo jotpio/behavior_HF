@@ -1,15 +1,17 @@
 DEBUG:
   console: true
   visualisation: true
+  skip_ticks: false
   
   #network dummies
-  dummy_joystick_client: true
+  dummy_joystick_client: false
 
 DEFAULTS:
-  number_of_fish: 5
+  number_of_fish: 0
   zoa: 200
   zoo: 80
   zor: 10
+  vision_angle: 200
 
   error_rad: 10
   max_speed: 10
@@ -28,4 +30,4 @@ NETWORK:
   joystick_port: 13002
 
 ROBOT:
-  controlled_from_start: true
+  controlled_from_start: false

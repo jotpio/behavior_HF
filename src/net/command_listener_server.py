@@ -47,11 +47,14 @@ class CommandListenerServer(QObject):
 
                     except:
                         print("COMSERVER: Socket error!")
+                        self.socket.shutdown(SHUT_RDWR) # SHUT_RDWR: further sends and receives are disallowed
+                        self.socket.close()
                         break
             except:
                 pass    
             finally:
                 print('COMSERVER: Closing socket')
+                self.socket.shutdown(SHUT_RDWR) # SHUT_RDWR: further sends and receives are disallowed
                 self.socket.close()
 
 if __name__ == '__main__':
@@ -67,5 +70,6 @@ if __name__ == '__main__':
 
     except (KeyboardInterrupt, SystemExit):
         print('\n! Received keyboard interrupt, quitting threads.\n')
+        s.socket.shutdown(SHUT_RDWR) # SHUT_RDWR: further sends and receives are disallowed
         s.socket.close()
         sys.exit()

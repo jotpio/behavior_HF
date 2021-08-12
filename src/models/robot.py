@@ -3,7 +3,7 @@ import numpy as np
 
 class Robot(Agent):
     def __init__(self, arena, config):
-        super().__init__(-1, [100,100], 90, arena, config)
+        super().__init__(0, [100,100], 90, arena, config)
 
         self.controlled = config['ROBOT']['controlled_from_start']
         self.debug = False
@@ -23,3 +23,6 @@ class Robot(Agent):
             super().move()
         else: 
             super().move()
+    
+    def reload(self):
+        pass

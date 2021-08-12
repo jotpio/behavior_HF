@@ -28,6 +28,7 @@ class PositionClient():
                 except:
                     print("POSCLIENT: Socket closed!")
                     self.connected = False
+                    self.socket.close()
                     self.socket = None
                     break
 

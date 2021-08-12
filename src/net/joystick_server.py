@@ -41,17 +41,28 @@ class JoystickServer(QObject):
                                 data = self.conn.recv(4096)
                                 data = json.loads(data.decode('utf-8'))
                                 amount_received += len(data)
-                                # print('JOYSERVER: Received "%s"' % data)
+                                print('JOYSERVER: Received "%s"' % data)
                                 if not self.debug:
                                     self.send_robodir.emit(data)
                     except:
                         print("JOYSERVER: Socket error!")
+                        self.socket.shutdown(SHUT_RDWR) # SHUT_RDWR: further sends and receives are disallowed
+                        self.socket.close()
+                        self.socket = None
                         break
             except:
                 pass    
             finally:
                 print('JOYSERVER: Closing socket')
+                self.socket.shutdown(SHUT_RDWR) # SHUT_RDWR: further sends and receives are disallowed
                 self.socket.close()
+                self.socket = None
+    # Deleting (Calling destructor)
+    def __del__(self):
+        self.socket.shutdown(SHUT_RDWR) # SHUT_RDWR: further sends and receives are disallowed
+        self.socket.close()
+        self.socket = None
+        print('JOYSERVER: Destructor called, Server deleted.')
 
 if __name__ == '__main__':
 

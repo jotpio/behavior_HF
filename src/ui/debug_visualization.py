@@ -17,6 +17,7 @@ class DebugVisualization(QObject):
         self.show_zor = True
         self.show_zoo = True
         self.show_zoa = True
+        self.show_vision_cones = False
 
         self.app = QApplication(sys.argv)
         self.window = QWidget()
@@ -63,6 +64,13 @@ class DebugVisualization(QObject):
         if(zoa > 0 and self.show_zoa):
             e_zoa = QGraphicsEllipseItem(-zoa, -zoa, zoa*2, zoa*2, parent=ellipse)
             e_zoa.setPen(QPen(QColor('green')))
+
+        #vision
+        if(self.show_vision_cones):
+            pie_vision = QGraphicsEllipseItem(-zoa,-zoa, zoa*2, zoa*2, parent=ellipse)
+            pie_vision.setStartAngle(90*16 - self.config["DEFAULTS"]["vision_angle"]*8)
+            pie_vision.setSpanAngle(self.config["DEFAULTS"]["vision_angle"]*16)
+            pie_vision.setBrush(QBrush(QColor(0,0,0,50)))   
         return ellipse
 
     def create_robot_shape(self, posx, posy, rot, zor=0, zoo=0, zoa=0, width=5, height=20):
@@ -74,6 +82,7 @@ class DebugVisualization(QObject):
         rect.setPen(pen)
         rect.setBrush(QBrush(QColor('red')))
 
+        #zones
         if(zor > 0 and self.show_zor):
             e_zor = QGraphicsEllipseItem(-zor, -zor, zor*2, zor*2, parent=rect)
             e_zor.setPen(QPen(QColor('red')))
@@ -83,6 +92,13 @@ class DebugVisualization(QObject):
         if(zoa > 0 and self.show_zoa):
             e_zoa = QGraphicsEllipseItem(-zoa, -zoa, zoa*2, zoa*2, parent=rect)
             e_zoa.setPen(QPen(QColor('green')))
+
+        #vision
+        if(self.show_vision_cones):
+            pie_vision = QGraphicsEllipseItem(-zoa,-zoa, zoa*2, zoa*2, parent=rect)
+            pie_vision.setStartAngle(90*16 - self.config["DEFAULTS"]["vision_angle"]*8)
+            pie_vision.setSpanAngle(self.config["DEFAULTS"]["vision_angle"]*16)
+
         return rect
 
     def update_ellipses(self, robot, fish):
@@ -97,12 +113,12 @@ class DebugVisualization(QObject):
     def update_view(self, agents):
         # print("update vis")
         for idx, a in enumerate(agents):
-            if a[2] == -1: #id
-                self.robot_shape.setRotation(a[1]+90)
-                self.robot_shape.setPos(a[0][0],a[0][1])
+            if a['id'] == 0: #id
+                self.robot_shape.setRotation(a['orientation']+90)
+                self.robot_shape.setPos(a['position'][0],a['position'][1])
             else:
-                self.fish_ellipses[idx-1].setRotation(a[1]+90)
-                self.fish_ellipses[idx-1].setPos(a[0][0],a[0][1])
+                self.fish_ellipses[idx-1].setRotation(a['orientation']+90)
+                self.fish_ellipses[idx-1].setPos(a['position'][0],a['position'][1])
 
     def setArena(self, arena):
         self.arena = arena
@@ -120,11 +136,13 @@ class DebugVisualization(QObject):
         brush = QBrush(QColor(255,0,0,25)) #r g b a
         self.scene.addPath(repulsion_zone, brush=brush)
 
-
     def change_zones(self, zones):
         self.show_zor = zones[0]
         self.show_zoo = zones[1]
         self.show_zoa = zones[2]
+    
+    def toggle_vision_cones(self, bool):
+        self.show_vision_cones = bool
 
     def app_exec(self):
         sys.exit(self.app.exec_())
