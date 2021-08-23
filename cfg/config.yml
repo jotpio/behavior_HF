@@ -2,6 +2,9 @@ DEBUG:
   console: true
   visualisation: true
   skip_ticks: false
+  optimisation: false
+  optimisation_individual : false
+  debug_following : true
   
   #network dummies
   dummy_joystick_client: false
@@ -11,13 +14,13 @@ DEFAULTS:
   zoa: 200
   zoo: 80
   zor: 10
-  vision_angle: 200
+  vision_angle: 300
 
   error_rad: 10
   max_speed: 10
   max_turn_rate: 150
 
-  time_step: 0.05 #20fps
+  time_step: 0.05 #0.05 = 20fps
 
 ARENA:
   width: 2000
