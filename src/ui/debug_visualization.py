@@ -20,6 +20,7 @@ class DebugVisualization(QObject):
         self.show_zoa = False
         self.show_vision_cones = False
         self.dark_mode = False
+        self.body_color = "white" if self.dark_mode else "black"
 
         self.app = QApplication(sys.argv)
         self.window = QWidget()
@@ -71,9 +72,9 @@ class DebugVisualization(QObject):
         ellipse = QGraphicsEllipseItem(-width / 2, -height / 2, width, height)
         ellipse.setPos(posx, posy)
         ellipse.setRotation(rot + 90)
-        color = "white" if self.dark_mode else "black"
-        ellipse.setPen(QPen(QColor(color)))
-        ellipse.setBrush(QBrush(QColor(color)))
+        self.body_color = "white" if self.dark_mode else "black"
+        ellipse.setPen(QPen(QColor(self.body_color)))
+        ellipse.setBrush(QBrush(QColor(self.body_color)))
 
         if zor > 0 and self.show_zor:
             e_zor = QGraphicsEllipseItem(-zor, -zor, zor * 2, zor * 2, parent=ellipse)
@@ -183,6 +184,12 @@ class DebugVisualization(QObject):
             else:
                 self.fish_ellipses[idx - 1].setRotation(a["orientation"] + 90)
                 self.fish_ellipses[idx - 1].setPos(a["position"][0], a["position"][1])
+                if a["following"]:
+                    self.fish_ellipses[idx - 1].setBrush(QBrush(QColor("green")))
+                else:
+                    self.fish_ellipses[idx - 1].setBrush(
+                        QBrush(QColor(self.body_color))
+                    )
 
     def setArena(self, arena):
         self.arena = arena

@@ -239,7 +239,7 @@ class Behavior(QObject):
         )
 
         # configure checkboxes
-        self.zoa_checkbox.setChecked(True)
+        self.zoa_checkbox.setChecked(False)
         self.zoo_checkbox.setChecked(False)
         self.zor_checkbox.setChecked(False)
         self.vision_checkbox.setChecked(False)
@@ -342,7 +342,7 @@ class Behavior(QObject):
         if self.optimisation:
             start_time = time.time()
 
-        # execute all commands queue first
+        # execute all commands in queue first
         while not (self.com_queue.empty()):
             command = self.com_queue.get()
 
@@ -375,7 +375,7 @@ class Behavior(QObject):
             # print(robomove1, robomove2, robomove3)
         self.movelist = []
 
-        # update all fish one time step forward
+        # update all fish one time step forward (tick)
         all_agents = [self.robot]
         all_agents.extend(self.allfish)
         all_pos = np.asarray([np.array(a.pos, dtype=np.float64) for a in all_agents])
@@ -388,6 +388,10 @@ class Behavior(QObject):
                     f.tick(all_pos, all_dir, dist_m[id_f])
             else:
                 f.tick(all_pos, all_dir, dist_m[id_f])
+                if id_f != 0:
+                    robot_pos = all_pos[0]
+                    robot_dir = all_dir[0]
+                    f.check_following(robot_pos, robot_dir)
         if self.skip_tick:
             self.skip_tick = False
         else:

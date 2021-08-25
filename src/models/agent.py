@@ -27,6 +27,7 @@ class Agent:
         self.ori = ori
         self.dir = dir
         self.config = config
+        self.influenced_by_robot = False
         self.optimisation_individual = config["DEBUG"]["optimisation_individual"]
 
         if dir is None:
@@ -80,9 +81,12 @@ class Agent:
         #
 
         # use corresponding precalculated distmatrix row
-        points_zor, dirs_zoo, points_zoa = get_zone_neighbours(
-            dists, fishpos, fishdir, self.zor, self.zoo, self.zoa
-        )
+        (
+            points_zor,
+            dirs_zoo,
+            points_zoa,
+            self.influenced_by_robot,
+        ) = get_zone_neighbours(dists, fishpos, fishdir, self.zor, self.zoo, self.zoa)
         points_zor = points_zor.tolist()
 
         if self.optimisation_individual:
@@ -322,11 +326,20 @@ def get_zone_neighbours(dists, fishpos, fishdir, zor, zoo, zoa):
     zoo_iarr = (dists > zor) & (dists <= zoo)
     zoa_iarr = (dists > zoo) & (dists <= zoa)
 
+    # print(zor_iarr)
+    # print(zoo_iarr)
+    # print(zoa_iarr)
+    # check if robot (id = 0) in attraction zone
+    if zoa_iarr[0] or zoo_iarr[0]:
+        influenced_by_robot = True
+    else:
+        influenced_by_robot = False
+
     points_zor = fishpos[zor_iarr]  # fish and arena points in zor
     dirs_zoo = fishdir[zoo_iarr]  # fish in zoo
     points_zoa = fishpos[zoa_iarr]  # fish in zoa
 
-    return points_zor, dirs_zoo, points_zoa
+    return points_zor, dirs_zoo, points_zoa, influenced_by_robot
 
 
 @jit(nopython=True)
