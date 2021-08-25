@@ -209,43 +209,44 @@ class Behavior(QObject):
         self.vision_checkbox = QCheckBox("Show vision cone")
         self.dark_mode_checkbox = QCheckBox("Enable dark mode")
 
-        self.zoa_checkbox.setChecked(False)
-        self.zoo_checkbox.setChecked(False)
-        self.zor_checkbox.setChecked(False)
-        self.vision_checkbox.setChecked(False)
-        self.dark_mode_checkbox.setChecked(True)
-
         self.layout.addWidget(self.zoa_checkbox)
         self.layout.addWidget(self.zoo_checkbox)
         self.layout.addWidget(self.zor_checkbox)
         self.layout.addWidget(self.vision_checkbox)
         self.layout.addWidget(self.dark_mode_checkbox)
 
-        #
-        self.parent_layout.addLayout(self.layout)
-
         # connect
-        self.reset_button.clicked.connect(
+        self.reset_button.toggled.connect(
             self.on_reset_button_clicked, Qt.QueuedConnection
         )
         self.num_fish_spinbox.valueChanged.connect(
             self.on_num_fish_spinbox_valueChanged, Qt.QueuedConnection
         )
-        self.zoa_checkbox.stateChanged.connect(
+        self.zoa_checkbox.toggled.connect(
             self.on_zone_checkbox_changed, Qt.QueuedConnection
         )
-        self.zoo_checkbox.stateChanged.connect(
+        self.zoo_checkbox.toggled.connect(
             self.on_zone_checkbox_changed, Qt.QueuedConnection
         )
-        self.zor_checkbox.stateChanged.connect(
+        self.zor_checkbox.toggled.connect(
             self.on_zone_checkbox_changed, Qt.QueuedConnection
         )
-        self.vision_checkbox.stateChanged.connect(
+        self.vision_checkbox.toggled.connect(
             self.on_vision_checkbox_changed, Qt.QueuedConnection
         )
-        self.dark_mode_checkbox.stateChanged.connect(
+        self.dark_mode_checkbox.toggled.connect(
             self.on_dark_mode_checkbox_changed, Qt.QueuedConnection
         )
+
+        # configure checkboxes
+        self.zoa_checkbox.setChecked(True)
+        self.zoo_checkbox.setChecked(False)
+        self.zor_checkbox.setChecked(False)
+        self.vision_checkbox.setChecked(False)
+        self.dark_mode_checkbox.setChecked(True)
+
+        #
+        self.parent_layout.addLayout(self.layout)
 
     def on_random_target_clicked(self):
         self.target = random.randint(300, 900), random.randint(10, 90)
@@ -258,7 +259,7 @@ class Behavior(QObject):
         self.com_queue.put(("reset_fish", val))
         print(f"Reseting positions of fish!")
 
-    def on_zone_checkbox_changed(self):
+    def on_zone_checkbox_changed(self, bool):
         zones = [
             self.zor_checkbox.isChecked(),
             self.zoo_checkbox.isChecked(),

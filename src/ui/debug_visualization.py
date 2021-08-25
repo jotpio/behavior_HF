@@ -15,11 +15,11 @@ class DebugVisualization(QObject):
         self.fish_ellipses = []
         self.arena = None
 
-        self.show_zor = True
-        self.show_zoo = True
-        self.show_zoa = True
+        self.show_zor = False
+        self.show_zoo = False
+        self.show_zoa = False
         self.show_vision_cones = False
-        self.dark_mode = True
+        self.dark_mode = False
 
         self.app = QApplication(sys.argv)
         self.window = QWidget()
