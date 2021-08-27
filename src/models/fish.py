@@ -51,8 +51,3 @@ class Fish(Agent):
                 self.following = True
                 return
         self.following = False
-
-    # def tick(self, fishpos, fishdir, dists):
-    #     super().tick(fishpos, fishdir, dists)
-
-    #     self.check_following()

@@ -28,6 +28,7 @@ class Agent:
         self.dir = dir
         self.config = config
         self.influenced_by_robot = False
+        self.repulsed = False
         self.optimisation_individual = config["DEBUG"]["optimisation_individual"]
 
         if dir is None:
@@ -129,12 +130,15 @@ class Agent:
         if n_zor > 0:
             # repulse
             dirt1 = repulse(points_zor, pos)
+            self.repulsed = True
             # print("repulse")
         # if no fish or wall in zone of repulsion
         else:
             # print("no repulse")
             n_zoo = len(dirs_zoo)
             n_zoa = len(points_zoa)
+
+            self.repulsed = False
 
             dir_o = np.asarray([0, 0])
             if n_zoo > 0:

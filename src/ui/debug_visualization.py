@@ -45,6 +45,14 @@ class DebugVisualization(QObject):
         self.view.setSceneRect(
             0, 0, self.config["ARENA"]["height"], self.config["ARENA"]["width"]
         )
+        self.view.setFrameShape(QFrame.NoFrame)
+        self.view.setTransformationAnchor(QGraphicsView.AnchorUnderMouse)
+        self.view.setResizeAnchor(QGraphicsView.AnchorUnderMouse)
+        self.view.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.view.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        # self.view.setBackgroundBrush(QBrush(QColor(30, 30, 30)))
+        self._zoom = 0
+
         # background_color = "black" if self.dark_mode else "white"
         color = QColor()
         if self.dark_mode:
@@ -67,6 +75,30 @@ class DebugVisualization(QObject):
             ),
             Qt.KeepAspectRatio,
         )
+
+    def wheelEvent(self, event):
+        if event.angleDelta().y() > 0:
+            factor = 1.25
+            self._zoom += 1
+        else:
+            factor = 0.8
+            self._zoom -= 1
+        if self._zoom > 0:
+            self.view.scale(factor, factor)
+        elif self._zoom == 0:
+            sceneRect = self.view.sceneRect()
+
+            self.view.fitInView(
+                QRectF(
+                    sceneRect.x() - 100,
+                    sceneRect.y() - 100,
+                    sceneRect.width() + 200,
+                    sceneRect.height() + 200,
+                ),
+                Qt.KeepAspectRatio,
+            )
+        else:
+            self._zoom = 0
 
     def createEllipse(self, posx, posy, rot, zor=0, zoo=0, zoa=0, width=5, height=15):
         ellipse = QGraphicsEllipseItem(-width / 2, -height / 2, width, height)
@@ -119,10 +151,10 @@ class DebugVisualization(QObject):
         rect = QGraphicsRectItem(-width / 2, -height / 2, width, height)
         rect.setPos(posx, posy)
         rect.setRotation(rot + 90)
-        pen = QPen(QColor("red"), 3)
+        pen = QPen(QColor("magenta"), 3)
         pen.setJoinStyle(Qt.RoundJoin)
         rect.setPen(pen)
-        rect.setBrush(QBrush(QColor("red")))
+        rect.setBrush(QBrush(QColor("magenta")))
 
         # zones
         if zor > 0 and self.show_zor:
@@ -184,7 +216,10 @@ class DebugVisualization(QObject):
             else:
                 self.fish_ellipses[idx - 1].setRotation(a["orientation"] + 90)
                 self.fish_ellipses[idx - 1].setPos(a["position"][0], a["position"][1])
-                if a["following"]:
+
+                if a["repulsed"]:
+                    self.fish_ellipses[idx - 1].setBrush(QBrush(QColor("red")))
+                elif a["following"]:
                     self.fish_ellipses[idx - 1].setBrush(QBrush(QColor("green")))
                 else:
                     self.fish_ellipses[idx - 1].setBrush(

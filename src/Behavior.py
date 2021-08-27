@@ -322,6 +322,9 @@ class Behavior(QObject):
             self.joystick_server.debug = False
             return True
 
+        elif event.type() == QEvent.Wheel and obj is self.debug_vis.viz_window:
+            self.debug_vis.wheelEvent(event)
+
         return False
 
     def supported_timesteps(self):
@@ -470,6 +473,7 @@ class Behavior(QObject):
                 "orientation": np.around(a.ori, decimals=2),
                 "position": np.rint(a.pos).tolist(),
                 "following": a.following,
+                "repulsed": a.repulsed,
             }
             # out.append([np.rint(a.pos).tolist(), np.around(a.ori, decimals=2), a.id])
             out.append(fish_dict)
