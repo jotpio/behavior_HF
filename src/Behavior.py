@@ -260,25 +260,28 @@ class Behavior(QObject):
         print(f"Reseting positions of fish!")
 
     def on_zone_checkbox_changed(self, bool):
-        zones = [
-            self.zor_checkbox.isChecked(),
-            self.zoo_checkbox.isChecked(),
-            self.zoa_checkbox.isChecked(),
-        ]
-        self.debug_vis.change_zones(zones)
-        self.update_ellipses.emit(self.robot, self.allfish)
+        if self.debug_vis:
+            zones = [
+                self.zor_checkbox.isChecked(),
+                self.zoo_checkbox.isChecked(),
+                self.zoa_checkbox.isChecked(),
+            ]
+            self.debug_vis.change_zones(zones)
+            self.update_ellipses.emit(self.robot, self.allfish)
 
     def on_vision_checkbox_changed(self):
-        self.debug_vis.toggle_vision_cones(self.vision_checkbox.isChecked())
-        self.update_ellipses.emit(self.robot, self.allfish)
+        if self.debug_vis:
+            self.debug_vis.toggle_vision_cones(self.vision_checkbox.isChecked())
+            self.update_ellipses.emit(self.robot, self.allfish)
 
     def on_num_fish_spinbox_valueChanged(self, val):
         self.com_queue.put(("reset_fish", val))
         print(f"Setting number of fish to: {val}")
 
     def on_dark_mode_checkbox_changed(self):
-        self.debug_vis.toggle_dark_mode(self.dark_mode_checkbox.isChecked())
-        self.update_ellipses.emit(self.robot, self.allfish)
+        if self.debug_vis:
+            self.debug_vis.toggle_dark_mode(self.dark_mode_checkbox.isChecked())
+            self.update_ellipses.emit(self.robot, self.allfish)
 
     def eventFilter(self, obj, event) -> bool:
         if event.type() == QEvent.KeyPress and obj is self.debug_vis.viz_window:

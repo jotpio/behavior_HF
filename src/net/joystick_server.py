@@ -1,8 +1,8 @@
-from socket import  *
+from socket import *
 import threading
 import json
 import sys
-from PyQt5.QtCore import (Qt, pyqtSignal, QObject)
+from PyQt5.QtCore import Qt, pyqtSignal, QObject
 
 
 class JoystickServer(QObject):
@@ -10,27 +10,29 @@ class JoystickServer(QObject):
 
     def __init__(self, parent, config=None):
         print("JOYSERVER: Starting joystick server!", flush=True)
-        super().__init__()  
+        super().__init__()
         self.config = config
         self.host = "127.0.0.1"
-        self.port = config['NETWORK']['joystick_port'] if config is not None else 13002
+        self.port = config["NETWORK"]["joystick_port"] if config is not None else 13002
         self.socket = socket(AF_INET, SOCK_STREAM)
         self.parent_behavior = parent
-        self.send_robodir.connect(self.parent_behavior.change_robodir, Qt.QueuedConnection)
+        self.send_robodir.connect(
+            self.parent_behavior.change_robodir, Qt.QueuedConnection
+        )
         self.debug = False
 
     def run_thread(self):
         print("JOYSERVER: Started Thread!")
-        
+
         while True:
             self.socket = socket(AF_INET, SOCK_STREAM)
             self.socket.bind((self.host, self.port))
 
-            try:    
-                self.socket.listen() # enable server to accept connections
+            try:
+                self.socket.listen()  # enable server to accept connections
                 print("JOYSERVER: Waiting for connection...")
-                self.conn, address = self.socket.accept() # wait for connection
-                print(f'JOYSERVER: Server connected by {address}')
+                self.conn, address = self.socket.accept()  # wait for connection
+                print(f"JOYSERVER: Server connected by {address}")
 
                 while True:
                     try:
@@ -39,43 +41,52 @@ class JoystickServer(QObject):
                             amount_received = 0
                             while amount_received < 4096:
                                 data = self.conn.recv(4096)
-                                data = json.loads(data.decode('utf-8'))
+                                print
+                                data = json.loads(data.decode("utf-8"))
                                 amount_received += len(data)
                                 print('JOYSERVER: Received "%s"' % data)
                                 if not self.debug:
                                     self.send_robodir.emit(data)
                     except:
                         print("JOYSERVER: Socket error!")
-                        self.socket.shutdown(SHUT_RDWR) # SHUT_RDWR: further sends and receives are disallowed
+                        self.socket.shutdown(
+                            SHUT_RDWR
+                        )  # SHUT_RDWR: further sends and receives are disallowed
                         self.socket.close()
                         self.socket = None
                         break
             except:
-                pass    
+                pass
             finally:
-                print('JOYSERVER: Closing socket')
-                self.socket.shutdown(SHUT_RDWR) # SHUT_RDWR: further sends and receives are disallowed
+                print("JOYSERVER: Closing socket")
+                # self.socket.shutdown(
+                #     SHUT_RDWR
+                # )  # SHUT_RDWR: further sends and receives are disallowed
                 self.socket.close()
                 self.socket = None
+
     # Deleting (Calling destructor)
     def __del__(self):
-        self.socket.shutdown(SHUT_RDWR) # SHUT_RDWR: further sends and receives are disallowed
+        self.socket.shutdown(
+            SHUT_RDWR
+        )  # SHUT_RDWR: further sends and receives are disallowed
         self.socket.close()
         self.socket = None
-        print('JOYSERVER: Destructor called, Server deleted.')
+        print("JOYSERVER: Destructor called, Server deleted.")
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
 
     try:
         s = JoystickServer()
-        thread = threading.Thread(target = s.run_thread)
+        thread = threading.Thread(target=s.run_thread)
         thread.daemon = True
         thread.start()
         # thread.join()
-        while thread.is_alive(): 
+        while thread.is_alive():
             thread.join(1)  # not sure if there is an appreciable cost to this.
 
     except (KeyboardInterrupt, SystemExit):
-        print('\n! Received keyboard interrupt, quitting threads.\n')
+        print("\n! Received keyboard interrupt, quitting threads.\n")
         s.socket.close()
         sys.exit()

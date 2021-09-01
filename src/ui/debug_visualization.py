@@ -50,6 +50,7 @@ class DebugVisualization(QObject):
         self.view.setResizeAnchor(QGraphicsView.AnchorUnderMouse)
         self.view.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.view.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.view.setDragMode(QGraphicsView.ScrollHandDrag)
         # self.view.setBackgroundBrush(QBrush(QColor(30, 30, 30)))
         self._zoom = 0
 
@@ -58,7 +59,7 @@ class DebugVisualization(QObject):
         if self.dark_mode:
             color.setRgb(0, 0, 0, 230)
         else:
-            color.setRgbF(255, 255, 255, 255)
+            color.setRgb(255, 255, 255, 255)
         self.view.setBackgroundBrush(QBrush(color))
         sceneRect = self.view.sceneRect()
         # self.view.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
@@ -77,6 +78,7 @@ class DebugVisualization(QObject):
         )
 
     def wheelEvent(self, event):
+        # https://stackoverflow.com/questions/35508711/how-to-enable-pan-and-zoom-in-a-qgraphicsview
         if event.angleDelta().y() > 0:
             factor = 1.25
             self._zoom += 1
@@ -193,7 +195,7 @@ class DebugVisualization(QObject):
         return rect
 
     def update_ellipses(self, robot, fish):
-        print("update shapes")
+        print("DEBUG: Updating shapes")
         self.fish_ellipses = [
             self.createEllipse(f.pos[0], f.pos[1], f.ori, f.zor, f.zoo, f.zoa)
             for f in fish
