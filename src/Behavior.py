@@ -64,6 +64,10 @@ class Behavior(QObject):
         self.default_num_fish = self.config["DEFAULTS"]["number_of_fish"]
         self.optimisation = self.config["DEBUG"]["optimisation"]
 
+        self.zoa = self.config["DEFAULTS"]["zoa"]
+        self.zoo = self.config["DEFAULTS"]["zoo"]
+        self.zor = self.config["DEFAULTS"]["zor"]
+
         # setup networking
         self.setup_networking()
 
@@ -83,9 +87,6 @@ class Behavior(QObject):
             [0, 0], self.config["ARENA"]["width"], self.config["ARENA"]["height"]
         )
 
-        self.zoa = self.config["DEFAULTS"]["zoa"]
-        self.zoo = self.config["DEFAULTS"]["zoo"]
-        self.zor = self.config["DEFAULTS"]["zor"]
         self.allfish = [
             Fish(
                 id=i + 1,
@@ -112,7 +113,6 @@ class Behavior(QObject):
         self.exec_stepper = 0
 
         self.com_queue = queue.LifoQueue()
-        self.robo_command = False
 
         # setup debug vis
         if self.debug_vis is not None:
@@ -190,6 +190,7 @@ class Behavior(QObject):
         )
         self.layout.addWidget(random_target)
 
+        # number of fish
         self.num_fish_layout = QHBoxLayout()
         num_fish_label = QLabel(f"Set number of fish:")
         self.num_fish_spinbox = QSpinBox()
@@ -215,8 +216,38 @@ class Behavior(QObject):
         self.layout.addWidget(self.vision_checkbox)
         self.layout.addWidget(self.dark_mode_checkbox)
 
+        # zor spinbox
+        self.zor_sb_layout = QHBoxLayout()
+        zor_sb_label = QLabel(f"Change zor radius:")
+        self.zor_spinbox = QSpinBox()
+        self.zor_spinbox.setRange(0, 2000)
+        self.zor_spinbox.setValue(self.zor)
+        self.zor_sb_layout.addWidget(zor_sb_label)
+        self.zor_sb_layout.addWidget(self.zor_spinbox)
+        self.layout.addLayout(self.zor_sb_layout)
+
+        # zoo spinbox
+        self.zoo_sb_layout = QHBoxLayout()
+        zoo_sb_label = QLabel(f"Change zoo radius:")
+        self.zoo_spinbox = QSpinBox()
+        self.zoo_spinbox.setRange(0, 2000)
+        self.zoo_spinbox.setValue(self.zoo)
+        self.zoo_sb_layout.addWidget(zoo_sb_label)
+        self.zoo_sb_layout.addWidget(self.zoo_spinbox)
+        self.layout.addLayout(self.zoo_sb_layout)
+
+        # zoa spinbox
+        self.zoa_sb_layout = QHBoxLayout()
+        zoa_sb_label = QLabel(f"Change zoa radius:")
+        self.zoa_spinbox = QSpinBox()
+        self.zoa_spinbox.setRange(0, 2000)
+        self.zoa_spinbox.setValue(self.zoa)
+        self.zoa_sb_layout.addWidget(zoa_sb_label)
+        self.zoa_sb_layout.addWidget(self.zoa_spinbox)
+        self.layout.addLayout(self.zoa_sb_layout)
+
         # connect
-        self.reset_button.toggled.connect(
+        self.reset_button.clicked.connect(
             self.on_reset_button_clicked, Qt.QueuedConnection
         )
         self.num_fish_spinbox.valueChanged.connect(
@@ -236,6 +267,16 @@ class Behavior(QObject):
         )
         self.dark_mode_checkbox.toggled.connect(
             self.on_dark_mode_checkbox_changed, Qt.QueuedConnection
+        )
+
+        self.zor_spinbox.valueChanged.connect(
+            self.on_zor_spinbox_valueChanged, Qt.QueuedConnection
+        )
+        self.zoo_spinbox.valueChanged.connect(
+            self.on_zoo_spinbox_valueChanged, Qt.QueuedConnection
+        )
+        self.zoa_spinbox.valueChanged.connect(
+            self.on_zoa_spinbox_valueChanged, Qt.QueuedConnection
         )
 
         # configure checkboxes
@@ -277,6 +318,18 @@ class Behavior(QObject):
     def on_num_fish_spinbox_valueChanged(self, val):
         self.com_queue.put(("reset_fish", val))
         print(f"Setting number of fish to: {val}")
+
+    def on_zor_spinbox_valueChanged(self, val):
+        zone_dir = {"zor": val}
+        self.change_zones(zone_dir)
+
+    def on_zoo_spinbox_valueChanged(self, val):
+        zone_dir = {"zoo": val}
+        self.change_zones(zone_dir)
+
+    def on_zoa_spinbox_valueChanged(self, val):
+        zone_dir = {"zoa": val}
+        self.change_zones(zone_dir)
 
     def on_dark_mode_checkbox_changed(self):
         if self.debug_vis:
@@ -351,22 +404,21 @@ class Behavior(QObject):
         # execute all commands in queue first
         while not (self.com_queue.empty()):
             command = self.com_queue.get()
-
+            if self.config["DEBUG"]["console"]:
+                print(command)
             # last movement command is used (LIFO)
             if command[0] == "change_robodir":
-                if not self.robo_command:
-                    func = getattr(self, command[0])
-                    args = command[1:]
-                    func(*args)
-                    self.robo_command = True
-                    # print(command[1:])
-                # else:
-                # print("already commanded!")
-            else:
                 func = getattr(self, command[0])
                 args = command[1:]
                 func(*args)
-        self.robo_command = False
+                # print(command[1:])
+            else:
+                try:
+                    func = getattr(self, command[0])
+                    args = command[1:]
+                    func(*args)
+                except:
+                    print(f"Command not found or error in command execution! {command}")
 
         # wasd robo movement
         if self.robot.debug and self.robot.controlled:
@@ -459,6 +511,9 @@ class Behavior(QObject):
         # self.j_thread
         pass
 
+    def app_exec(self):
+        sys.exit(self.app.exec_())
+
     def serialize(self):
         out = []
         # robot
@@ -483,6 +538,14 @@ class Behavior(QObject):
 
         return out
 
+    def queue_command(self, command):
+        self.com_queue.put((command[0], command[1]))
+        print("New command queued!")
+
+    #
+    # Commands
+    #
+
     def reset_fish(self, num):
         self.allfish = [
             Fish(
@@ -496,14 +559,14 @@ class Behavior(QObject):
                 ori=random.randint(0, 360),
                 arena=self.arena,
                 config=self.config,
+                dir=None,
+                zor=self.zor,
+                zoo=self.zoo,
+                zoa=self.zoa,
             )
             for i in range(num)
         ]
         self.update_ellipses.emit(self.robot, self.allfish)
-
-    def queue_command(self, command):
-        self.com_queue.put((command[0], command[1]))
-        print("New command queued!")
 
     def control_robot(self, flag):
         self.robot.controlled = flag
@@ -514,5 +577,26 @@ class Behavior(QObject):
         dir_len = np.linalg.norm(np_dir)
         self.robot.new_dir = np_dir / dir_len if dir_len != 0 else np.asarray([0, 0])
 
-    def app_exec(self):
-        sys.exit(self.app.exec_())
+    def change_zones(self, zone_dir):
+        self.zor = zone_dir.get("zor", self.zor)
+        self.zoo = zone_dir.get("zoo", self.zoo)
+        self.zoa = zone_dir.get("zoa", self.zoa)
+
+        self.robot.change_zones(self.zor, self.zoo, self.zoa)
+        for f in self.allfish:
+            f.change_zones(self.zor, self.zoo, self.zoa)
+
+        if self.debug_vis:
+            self.update_ellipses.emit(self.robot, self.allfish)
+
+    def set_zone_preset(self, size):
+        if size == "small":
+            zor = 10
+            zoo = 80
+            zoa = 200
+
+        if size == "large":
+            zor = 10
+            zoo = 150
+            zoa = 300
+

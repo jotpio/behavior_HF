@@ -20,7 +20,7 @@ class Fish(Agent):
         zor=None,
         time_step=None,
     ):
-        super().__init__(id, pos, ori, arena, config, dir, zoa, zoo, zor, time_step)
+        super().__init__(id, pos, ori, arena, config, dir, zor, zoo, zoa, time_step)
 
         # self.alligned_with_robot = False
         self.following = False

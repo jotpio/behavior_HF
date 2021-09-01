@@ -17,9 +17,9 @@ class Agent:
         arena,
         config,
         dir=None,
-        zoa=None,
-        zoo=None,
         zor=None,
+        zoo=None,
+        zoa=None,
         time_step=None,
     ):
         self.id = id
@@ -51,9 +51,9 @@ class Agent:
         self.max_turn_rate = config["DEFAULTS"]["max_turn_rate"]  # by second
 
         # zone radii
-        self.zoa = zoa if zoa != None else config["DEFAULTS"]["zoa"]
-        self.zoo = zoo if zoo != None else config["DEFAULTS"]["zoo"]
         self.zor = zor if zor != None else config["DEFAULTS"]["zor"]
+        self.zoo = zoo if zoo != None else config["DEFAULTS"]["zoo"]
+        self.zoa = zoa if zoa != None else config["DEFAULTS"]["zoa"]
 
         self.vision_angle = config["DEFAULTS"]["vision_angle"]
         self.half_vision_cos = np.cos(np.radians(self.vision_angle / 2))
@@ -129,7 +129,7 @@ class Agent:
         n_zor = len(points_zor)
         if n_zor > 0:
             # repulse
-            dirt1 = repulse(points_zor, pos)
+            dirt1 = repulse(np.asarray(points_zor), pos)
             self.repulsed = True
             # print("repulse")
         # if no fish or wall in zone of repulsion
@@ -272,6 +272,14 @@ class Agent:
                 elif self.new_dir[0] < 0 and self.new_dir[1] <= 0:
                     self.new_dir = np.asarray([0.0, -1.0])  # go up
             return False
+
+    def change_zones(self, zor=None, zoo=None, zoa=None):
+        if zor:
+            self.zor = zor
+        if zoo:
+            self.zoo = zoo
+        if zoa:
+            self.zoa = zoa
 
 
 @jit(nopython=True)
