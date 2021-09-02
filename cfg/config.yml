@@ -10,7 +10,7 @@ DEBUG:
   dummy_joystick_client: false
 
 DEFAULTS:
-  number_of_fish: 0
+  number_of_fish: 10
   zoa: 200
   zoo: 80
   zor: 10

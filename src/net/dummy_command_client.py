@@ -32,6 +32,7 @@ class DummyCommandClient():
                 except:
                     print("DUMMY COMMAND CLIENT: Socket closed!")
                     self.connected = False
+                    self.socket.close()
                     self.socket = None
                     break
 

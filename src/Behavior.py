@@ -589,14 +589,28 @@ class Behavior(QObject):
         if self.debug_vis:
             self.update_ellipses.emit(self.robot, self.allfish)
 
-    def set_zone_preset(self, size):
-        if size == "small":
-            zor = 10
-            zoo = 80
-            zoa = 200
+        self.zor_spinbox.setValue(self.zor)
+        self.zoo_spinbox.setValue(self.zoo)
+        self.zoa_spinbox.setValue(self.zoa)
 
-        if size == "large":
-            zor = 10
-            zoo = 150
-            zoa = 300
+    def set_zone_preset(self, size):
+        if size == 0:
+            self.zor = 10
+            self.zoo = 80
+            self.zoa = 200
+        
+        if size == 1:
+            self.zor = 20
+            self.zoo = 100
+            self.zoa = 300
+
+        for f in self.allfish:
+            f.change_zones(self.zor, self.zoo, self.zoa)
+
+        if self.debug_vis:
+            self.update_ellipses.emit(self.robot, self.allfish)
+
+        self.zor_spinbox.setValue(self.zor)
+        self.zoo_spinbox.setValue(self.zoo)
+        self.zoa_spinbox.setValue(self.zoa)
 
