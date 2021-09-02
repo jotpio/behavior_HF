@@ -16,6 +16,7 @@ from src.net.position_client import PositionClient
 from src.net.command_listener_server import CommandListenerServer
 from src.net.joystick_server import JoystickServer
 from src.net.dummy_joystick_client import DummyJoystickClient
+from src.ui.parameter_ui import Parameter_UI
 from src.models.arena import Arena
 from src.models.fish import Fish
 from src.models.robot import Robot
@@ -31,6 +32,7 @@ except ImportError:
 
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import Qt, pyqtSignal, QObject, QEvent
+
 from PyQt5.QtGui import QPen, QBrush, QColor, QPainter
 
 # from robotracker import (
@@ -100,7 +102,7 @@ class Behavior(QObject):
                 arena=self.arena,
                 config=self.config,
             )
-            for i in range(self.num_fish_spinbox.value())
+            for i in range(self.parameter_ui.num_fish_spinbox.value())
         ]
 
         # robot
@@ -182,112 +184,10 @@ class Behavior(QObject):
 
     def setup_parameter_ui(self, layout):
         self.parent_layout = layout
-        self.layout = QVBoxLayout()
 
-        random_target = QPushButton(f"Drive to new random point")
-        random_target.clicked.connect(
-            self.on_random_target_clicked, Qt.QueuedConnection
-        )
-        self.layout.addWidget(random_target)
-
-        # number of fish
-        self.num_fish_layout = QHBoxLayout()
-        num_fish_label = QLabel(f"Set number of fish:")
-        self.num_fish_spinbox = QSpinBox()
-        self.num_fish_spinbox.setRange(0, 1000)
-        self.num_fish_spinbox.setValue(self.default_num_fish)
-        self.num_fish_layout.addWidget(num_fish_label)
-        self.num_fish_layout.addWidget(self.num_fish_spinbox)
-        self.layout.addLayout(self.num_fish_layout)
-
-        self.reset_button = QPushButton(f"Reset fish")
-        self.layout.addWidget(self.reset_button)
-
-        # zone checkboxes
-        self.zoa_checkbox = QCheckBox("Show zone of attraction")
-        self.zoo_checkbox = QCheckBox("Show zone of orientation")
-        self.zor_checkbox = QCheckBox("Show zone of repulsion")
-        self.vision_checkbox = QCheckBox("Show vision cone")
-        self.dark_mode_checkbox = QCheckBox("Enable dark mode")
-
-        self.layout.addWidget(self.zoa_checkbox)
-        self.layout.addWidget(self.zoo_checkbox)
-        self.layout.addWidget(self.zor_checkbox)
-        self.layout.addWidget(self.vision_checkbox)
-        self.layout.addWidget(self.dark_mode_checkbox)
-
-        # zor spinbox
-        self.zor_sb_layout = QHBoxLayout()
-        zor_sb_label = QLabel(f"Change zor radius:")
-        self.zor_spinbox = QSpinBox()
-        self.zor_spinbox.setRange(0, 2000)
-        self.zor_spinbox.setValue(self.zor)
-        self.zor_sb_layout.addWidget(zor_sb_label)
-        self.zor_sb_layout.addWidget(self.zor_spinbox)
-        self.layout.addLayout(self.zor_sb_layout)
-
-        # zoo spinbox
-        self.zoo_sb_layout = QHBoxLayout()
-        zoo_sb_label = QLabel(f"Change zoo radius:")
-        self.zoo_spinbox = QSpinBox()
-        self.zoo_spinbox.setRange(0, 2000)
-        self.zoo_spinbox.setValue(self.zoo)
-        self.zoo_sb_layout.addWidget(zoo_sb_label)
-        self.zoo_sb_layout.addWidget(self.zoo_spinbox)
-        self.layout.addLayout(self.zoo_sb_layout)
-
-        # zoa spinbox
-        self.zoa_sb_layout = QHBoxLayout()
-        zoa_sb_label = QLabel(f"Change zoa radius:")
-        self.zoa_spinbox = QSpinBox()
-        self.zoa_spinbox.setRange(0, 2000)
-        self.zoa_spinbox.setValue(self.zoa)
-        self.zoa_sb_layout.addWidget(zoa_sb_label)
-        self.zoa_sb_layout.addWidget(self.zoa_spinbox)
-        self.layout.addLayout(self.zoa_sb_layout)
-
-        # connect
-        self.reset_button.clicked.connect(
-            self.on_reset_button_clicked, Qt.QueuedConnection
-        )
-        self.num_fish_spinbox.valueChanged.connect(
-            self.on_num_fish_spinbox_valueChanged, Qt.QueuedConnection
-        )
-        self.zoa_checkbox.toggled.connect(
-            self.on_zone_checkbox_changed, Qt.QueuedConnection
-        )
-        self.zoo_checkbox.toggled.connect(
-            self.on_zone_checkbox_changed, Qt.QueuedConnection
-        )
-        self.zor_checkbox.toggled.connect(
-            self.on_zone_checkbox_changed, Qt.QueuedConnection
-        )
-        self.vision_checkbox.toggled.connect(
-            self.on_vision_checkbox_changed, Qt.QueuedConnection
-        )
-        self.dark_mode_checkbox.toggled.connect(
-            self.on_dark_mode_checkbox_changed, Qt.QueuedConnection
-        )
-
-        self.zor_spinbox.valueChanged.connect(
-            self.on_zor_spinbox_valueChanged, Qt.QueuedConnection
-        )
-        self.zoo_spinbox.valueChanged.connect(
-            self.on_zoo_spinbox_valueChanged, Qt.QueuedConnection
-        )
-        self.zoa_spinbox.valueChanged.connect(
-            self.on_zoa_spinbox_valueChanged, Qt.QueuedConnection
-        )
-
-        # configure checkboxes
-        self.zoa_checkbox.setChecked(False)
-        self.zoo_checkbox.setChecked(False)
-        self.zor_checkbox.setChecked(False)
-        self.vision_checkbox.setChecked(False)
-        self.dark_mode_checkbox.setChecked(True)
-
+        self.parameter_ui = Parameter_UI(self)
         #
-        self.parent_layout.addLayout(self.layout)
+        self.parent_layout.addLayout(self.parameter_ui)
 
     def on_random_target_clicked(self):
         self.target = random.randint(300, 900), random.randint(10, 90)
@@ -296,23 +196,25 @@ class Behavior(QObject):
         print(f"New target selected: {self.target[0]},{self.target[1]}")
 
     def on_reset_button_clicked(self):
-        val = self.num_fish_spinbox.value()
+        val = self.parameter_ui.num_fish_spinbox.value()
         self.com_queue.put(("reset_fish", val))
         print(f"Reseting positions of fish!")
 
     def on_zone_checkbox_changed(self, bool):
         if self.debug_vis:
             zones = [
-                self.zor_checkbox.isChecked(),
-                self.zoo_checkbox.isChecked(),
-                self.zoa_checkbox.isChecked(),
+                self.parameter_ui.zor_checkbox.isChecked(),
+                self.parameter_ui.zoo_checkbox.isChecked(),
+                self.parameter_ui.zoa_checkbox.isChecked(),
             ]
             self.debug_vis.change_zones(zones)
             self.update_ellipses.emit(self.robot, self.allfish)
 
     def on_vision_checkbox_changed(self):
         if self.debug_vis:
-            self.debug_vis.toggle_vision_cones(self.vision_checkbox.isChecked())
+            self.debug_vis.toggle_vision_cones(
+                self.parameter_ui.vision_checkbox.isChecked()
+            )
             self.update_ellipses.emit(self.robot, self.allfish)
 
     def on_num_fish_spinbox_valueChanged(self, val):
@@ -333,7 +235,9 @@ class Behavior(QObject):
 
     def on_dark_mode_checkbox_changed(self):
         if self.debug_vis:
-            self.debug_vis.toggle_dark_mode(self.dark_mode_checkbox.isChecked())
+            self.debug_vis.toggle_dark_mode(
+                self.parameter_ui.dark_mode_checkbox.isChecked()
+            )
             self.update_ellipses.emit(self.robot, self.allfish)
 
     def eventFilter(self, obj, event) -> bool:
@@ -394,6 +298,9 @@ class Behavior(QObject):
         self.robot = None
         self.world = None
 
+    #
+    # looping method
+    #
     def next_speeds(self, robots, fish, timestep):
         # print("next_speeds")
 
@@ -589,20 +496,20 @@ class Behavior(QObject):
         if self.debug_vis:
             self.update_ellipses.emit(self.robot, self.allfish)
 
-        self.zor_spinbox.setValue(self.zor)
-        self.zoo_spinbox.setValue(self.zoo)
-        self.zoa_spinbox.setValue(self.zoa)
+        self.parameter_ui.zor_spinbox.setValue(self.zor)
+        self.parameter_ui.zoo_spinbox.setValue(self.zoo)
+        self.parameter_ui.zoa_spinbox.setValue(self.zoa)
 
     def set_zone_preset(self, size):
         if size == 0:
-            self.zor = 10
-            self.zoo = 80
-            self.zoa = 200
-        
+            self.zor = self.config["ZONE_MODES"]["SMALL"]["zor"]
+            self.zoo = self.config["ZONE_MODES"]["SMALL"]["zoo"]
+            self.zoa = self.config["ZONE_MODES"]["SMALL"]["zoa"]
+
         if size == 1:
-            self.zor = 20
-            self.zoo = 100
-            self.zoa = 300
+            self.zor = self.config["ZONE_MODES"]["LARGE"]["zor"]
+            self.zoo = self.config["ZONE_MODES"]["LARGE"]["zoo"]
+            self.zoa = self.config["ZONE_MODES"]["LARGE"]["zoa"]
 
         for f in self.allfish:
             f.change_zones(self.zor, self.zoo, self.zoa)
@@ -610,7 +517,7 @@ class Behavior(QObject):
         if self.debug_vis:
             self.update_ellipses.emit(self.robot, self.allfish)
 
-        self.zor_spinbox.setValue(self.zor)
-        self.zoo_spinbox.setValue(self.zoo)
-        self.zoa_spinbox.setValue(self.zoa)
+        self.parameter_ui.zor_spinbox.setValue(self.zor)
+        self.parameter_ui.zoo_spinbox.setValue(self.zoo)
+        self.parameter_ui.zoa_spinbox.setValue(self.zoa)
 

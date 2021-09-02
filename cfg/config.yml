@@ -34,3 +34,13 @@ NETWORK:
 
 ROBOT:
   controlled_from_start: false
+
+ZONE_MODES:
+  SMALL:
+    zor: 10
+    zoo: 50
+    zoa: 200
+  LARGE:
+    zor: 20
+    zoo: 100
+    zoa: 300
