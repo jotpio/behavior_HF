@@ -45,7 +45,7 @@ class Agent:
             time_step if time_step != None else config["DEFAULTS"]["time_step"]
         )
 
-        self.error_rad = config["DEFAULTS"]["error_rad"]
+        self.error_deg = config["DEFAULTS"]["error_deg"]
 
         self.max_speed = config["DEFAULTS"]["max_speed"]
         self.max_turn_rate = config["DEFAULTS"]["max_turn_rate"]  # by second
@@ -165,7 +165,7 @@ class Agent:
         #
         # add random noise rotation to new direction vector
         #
-        noise = math.radians(random.gauss(0, self.error_rad))
+        noise = math.radians(random.gauss(0, self.error_deg))
         # print(noise)
         rand_rot_matrix = np.array(
             [[np.cos(noise), -np.sin(noise)], [np.sin(noise), np.cos(noise)]]

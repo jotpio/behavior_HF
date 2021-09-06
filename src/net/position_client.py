@@ -18,6 +18,7 @@ class PositionClient:
         while not self.connected:
             try:
                 self.socket = socket(AF_INET, SOCK_STREAM)
+                print("POSCLIENT: Trying to connect...")
                 self.socket.connect(self.server_address)
                 self.connected = True
                 print("POSCLIENT: Connecting to %s port %s" % self.server_address)

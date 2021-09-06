@@ -16,7 +16,7 @@ DEFAULTS:
   zor: 10
   vision_angle: 300
 
-  error_rad: 10
+  error_deg: 10
   max_speed: 10
   max_turn_rate: 150
 

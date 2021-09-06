@@ -2,6 +2,7 @@ from socket import *
 import threading
 import json
 import sys
+import time
 from PyQt5.QtCore import Qt, pyqtSignal, QObject
 
 
@@ -25,34 +26,53 @@ class JoystickServer(QObject):
         print("JOYSERVER: Started Thread!")
 
         while True:
-            self.socket = socket(AF_INET, SOCK_STREAM)
-            self.socket.bind((self.host, self.port))
+            try:
+                self.socket = socket(AF_INET, SOCK_STREAM)
+                self.socket.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
+                self.socket.bind((self.host, self.port))
+            except:
+                print(f"JOYSERVER: {self.port} already in use!")
+                if self.socket:
+                    if self.connected:
+                        self.socket.shutdown(1)
+                    self.socket.close()
+                    self.socket = None
+                time.sleep(0.3)
+                continue
 
             try:
                 self.socket.listen()  # enable server to accept connections
                 print("JOYSERVER: Waiting for connection...")
                 self.conn, address = self.socket.accept()  # wait for connection
                 print(f"JOYSERVER: Server connected by {address}")
-
-                while True:
+                self.connected = True
+                while self.connected:
                     try:
                         amount_received = 0
-                        while True:
+                        while self.connected:
                             amount_received = 0
                             while amount_received < 4096:
-                                data = self.conn.recv(4096)
-                                print
-                                data = json.loads(data.decode("utf-8"))
-                                amount_received += len(data)
-                                print('JOYSERVER: Received "%s"' % data)
-                                if not self.debug:
-                                    self.send_robodir.emit(data)
+                                data = self.conn.recv(4096).decode("utf-8")
+                                
+                                if len(data) == 0:
+                                    print("JOYSERVER: Empty data closing socket")
+                                    if self.socket:
+                                        self.socket.shutdown(SHUT_WR)
+                                        self.socket.close()
+                                        self.connected = False
+                                    self.socket = None
+                                    break
+                                # data = json.loads(data.decode("utf-8"))
+                                # amount_received += len(data)
+                                # print('JOYSERVER: Received "%s"' % data)
+                                # if not self.debug:
+                                #     self.send_robodir.emit(data)
                     except:
                         print("JOYSERVER: Socket error!")
-                        self.socket.shutdown(
-                            SHUT_RDWR
-                        )  # SHUT_RDWR: further sends and receives are disallowed
-                        self.socket.close()
+                        if self.socket:
+                            self.socket.shutdown(SHUT_WR)
+                            self.socket.close()
+                            self.connected = False
                         self.socket = None
                         break
             except:
@@ -62,7 +82,10 @@ class JoystickServer(QObject):
                 # self.socket.shutdown(
                 #     SHUT_RDWR
                 # )  # SHUT_RDWR: further sends and receives are disallowed
-                self.socket.close()
+                if self.socket:
+                    self.socket.shutdown(SHUT_WR)
+                    self.socket.close()
+                    self.connected = False
                 self.socket = None
 
     # Deleting (Calling destructor)

@@ -1,14 +1,18 @@
 import random
 
-from PyQt5.sip import wrapinstance as wrapInstance
 from PyQt5.QtWidgets import QLayout, QVBoxLayout, QPushButton
+from PyQt5.sip import wrapinstance as wrapInstance
 
-from robotracker import (
-    PythonBehavior,
-    RobotActionFlush,
-    RobotActionHalt,
-    RobotActionToTarget,
-)
+try:
+    from robotracker import (
+        PythonBehavior,
+        RobotActionFlush,
+        RobotActionHalt,
+        RobotActionToTarget,
+    )
+    print("RoboTracker found!")
+except:
+    print("No RoboTracker found!")
 
 
 class Behavior(PythonBehavior):
@@ -46,12 +50,17 @@ class Behavior(PythonBehavior):
     def next_speeds(self, robots, fish, timestep):
         robots = [r for r in robots if r.uid == self.robot.uid]
         if not robots:
+            print("No robot found!")
             return [
                 RobotActionFlush(self.robot.uid),
                 RobotActionHalt(self.robot.uid, 0),
             ]
         else:
             if self.target is not None:
+                print(f"Target set: {self.target}")
+                print(f"Robot: {self.robot.uid}")
+                print(f"{self.robot.position}, {self.robot.orientation}")
+                print(f"{robots[0].position}")
                 target = self.target
                 self.target = None
                 return [

@@ -21,26 +21,22 @@ from src.models.arena import Arena
 from src.models.fish import Fish
 from src.models.robot import Robot
 
-# from PyQt5.sip import wrapinstance as wrapInstance
-
-try:
-    # new location for sip
-    # https://www.riverbankcomputing.com/static/Docs/PyQt5/incompatibilities.html#pyqt-v5-11
-    from PyQt5 import sip
-except ImportError:
-    import sip
+from PyQt5.sip import wrapinstance as wrapInstance
 
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import Qt, pyqtSignal, QObject, QEvent
 
 from PyQt5.QtGui import QPen, QBrush, QColor, QPainter
 
-# from robotracker import (
-#     PythonBehavior,
-#     RobotActionFlush,
-#     RobotActionHalt,
-#     RobotActionToTarget,
-# )
+try:
+    from robotracker import (
+        PythonBehavior,
+        RobotActionFlush,
+        RobotActionHalt,
+        RobotActionToTarget,
+)
+except:
+    print("No RoboTracker found!")
 
 np.warnings.filterwarnings("error", category=np.VisibleDeprecationWarning)
 

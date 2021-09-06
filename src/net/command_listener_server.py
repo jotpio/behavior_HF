@@ -32,7 +32,7 @@ class CommandListenerServer(QObject):
                 self.socket.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
                 self.socket.bind((self.host, self.port))
             except:
-                print(f"{self.port} already in use!")
+                print(f"COMSERVER: {self.port} already in use!")
                 if self.socket:
                     if self.connected:
                         self.socket.shutdown(1)
