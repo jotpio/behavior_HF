@@ -1,6 +1,6 @@
 DEBUG:
   console: true
-  visualisation: true
+  visualisation: false
   skip_ticks: false
   optimisation: false
   optimisation_individual : false

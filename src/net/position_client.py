@@ -17,28 +17,40 @@ class PositionClient:
         print("POSCLIENT: Started Thread!")
         while not self.connected:
             try:
-                self.socket = socket(AF_INET, SOCK_STREAM)
                 print("POSCLIENT: Trying to connect...")
+                self.socket = socket(AF_INET, SOCK_STREAM)
                 self.socket.connect(self.server_address)
                 self.connected = True
                 print("POSCLIENT: Connecting to %s port %s" % self.server_address)
             except Exception as e:
-                pass  # Do nothing, just try again
+                time.sleep(0.5)  # Do nothing, just try again
             while self.connected:
                 try:
-                    self.socket.recv(128)
+                    print("POSCLIENT: Testing connection...")
+                    data = self.socket.recv(8192).decode("utf-8")
+                    # print(f"data {data}")
+                    if data == "end connection":
+                        print("POSCLIENT: Connection closed")
+                        self.connected = False
+                        self.socket.close()
+                        self.socket = None
                 except:
                     print("POSCLIENT: Socket closed!")
                     self.connected = False
-                    self.socket.close()
-                    self.socket = None
+                    if self.socket:
+                        self.socket.close()
+                        self.socket = None
                     break
 
     def send_pos(self, pos):
         try:
-            if self.connected:
-                # print("POSCLIENT: Sending positions", flush=True)
+            if self.connected and self.socket:
+                print("POSCLIENT: Sending positions", flush=True)
                 dump = json.dumps(pos).encode("utf-8")
                 self.socket.sendall(dump)
         except:
-            "POSCLIENT: Socket error!"
+            print("POSCLIENT: Socket error!")
+            self.connected = False
+            if self.socket:
+                self.socket.close()
+                self.socket = None
