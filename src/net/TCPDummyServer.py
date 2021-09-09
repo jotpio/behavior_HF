@@ -48,23 +48,26 @@ class TCPDummyServer:
                             amount_received = 0
                             while amount_received < 8192:
                                 data = self.conn.recv(8192).decode("utf-8")
-                                print(data)
-                                # data = json.loads(data.decode("utf-8"))
+                                # print(data)
+                                try:
+                                    data = json.loads(data)
+                                except:
+                                    pass
                                 amount_received += len(data)
                                 print('POSSERVER: Received "%s"' % data)
                                 self.counter += 1
 
-                                if self.counter == 10:
-                                    self.counter = 0
-                                    if self.socket:
-                                        self.conn.sendall(
-                                            "end connection".encode("utf-8")
-                                        )
-                                        self.socket.shutdown(SHUT_RDWR)
-                                        self.socket.close()
-                                        self.socket = None
-                                    self.connected = False
-                                    break
+                                # if self.counter == 10:
+                                #     self.counter = 0
+                                #     if self.socket:
+                                #         self.conn.sendall(
+                                #             "end connection".encode("utf-8")
+                                #         )
+                                #         self.socket.shutdown(SHUT_RDWR)
+                                #         self.socket.close()
+                                #         self.socket = None
+                                #     self.connected = False
+                                #     break
 
                     except:
                         print("POSSERVER: Socket error!")

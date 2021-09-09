@@ -33,17 +33,19 @@ class Behavior(PythonBehavior):
         self.target = None
     
     def on_random_target_clicked(self):
-        self.target = random.randint(10, 90), random.randint(10, 90)
+        self.target = random.randint(10, 55), random.randint(10, 55)
         print(f"New target selected: {self.target[0]},{self.target[1]}")
 
     def supported_timesteps(self):
         return []
 
     def activate(self, robot, world):
+        print("Behavior: Activated")
         self.robot = robot
         self.world = world
 
     def deactivate(self):
+        print("Behavior: Deactivated")
         self.robot = None
         self.world = None
 

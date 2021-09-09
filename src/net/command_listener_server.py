@@ -54,7 +54,10 @@ class CommandListenerServer(QObject):
                             amount_received = 0
                             while amount_received < 4096:
                                 data = self.conn.recv(4096)
-                                data = json.loads(data.decode("utf-8"))
+                                try:
+                                    data = json.loads(data.decode("utf-8"))
+                                except:
+                                    print("COMSERVER: Error decoding message!")
                                 amount_received += len(data)
                                 print('COMSERVER: Received "%s"' % data)
 
@@ -64,7 +67,7 @@ class CommandListenerServer(QObject):
                         print("COMSERVER: Socket error!")
 
                         if self.socket:
-                            self.socket.shutdown(SHUT_WR)
+                            # self.socket.shutdown(SHUT_WR)
                             self.socket.close()
                             self.connected = False
                         self.socket = None

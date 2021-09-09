@@ -1,5 +1,6 @@
 from src.models.agent import Agent
 import numpy as np
+import math
 
 
 class Robot(Agent):
@@ -10,6 +11,7 @@ class Robot(Agent):
         self.debug = False
         self.battery = 100
         self.new_dir = np.asarray([0.1, 0])
+        self.real_robot = None
 
     def tick(self, fishpos, fishdir, dists):
         if self.debug:
@@ -26,8 +28,17 @@ class Robot(Agent):
             super().move()
 
     def reload(self):
+        print("ROBOT: Reloading...")
         pass
 
     def get_battery_charge(self):
         pass
 
+    def set_robot(self, robot):
+        self.real_robot = robot
+        if robot:
+            self.pos = np.asarray([robot.position[0], robot.position[1]])
+            self.dir = np.asarray([robot.orientation[0], robot.orientation[1]])
+            self.ori = np.degrees(math.atan2(self.dir[1], self.dir[0]))
+
+            print(f"Behavior - Robot: {self.pos}")

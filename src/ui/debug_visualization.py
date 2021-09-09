@@ -23,6 +23,7 @@ class DebugVisualization(QObject):
         self.body_color = "white" if self.dark_mode else "black"
 
         self.app = QApplication(sys.argv)
+
         self.window = QWidget()
         self.window.setWindowTitle("Parameter window")
         self.window.setGeometry(100, 100, 200, 200)

@@ -17,13 +17,13 @@ class PositionClient:
         print("POSCLIENT: Started Thread!")
         while not self.connected:
             try:
-                print("POSCLIENT: Trying to connect...")
+                # print("POSCLIENT: Trying to connect...")
                 self.socket = socket(AF_INET, SOCK_STREAM)
                 self.socket.connect(self.server_address)
                 self.connected = True
                 print("POSCLIENT: Connecting to %s port %s" % self.server_address)
             except Exception as e:
-                time.sleep(0.5)  # Do nothing, just try again
+                time.sleep(1)  # Do nothing, just try again
             while self.connected:
                 try:
                     print("POSCLIENT: Testing connection...")
@@ -45,7 +45,7 @@ class PositionClient:
     def send_pos(self, pos):
         try:
             if self.connected and self.socket:
-                print("POSCLIENT: Sending positions", flush=True)
+                # print("POSCLIENT: Sending positions", flush=True)
                 dump = json.dumps(pos).encode("utf-8")
                 self.socket.sendall(dump)
         except:

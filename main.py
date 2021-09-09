@@ -47,14 +47,14 @@ class Main:
             layout=layout, DEBUG_VIS=self.debug_vis, config=self.config
         )
         if self.debug_vis is not None:
-            self.behavior.update_positions.connect(
+            self.behavior.network_controller.update_positions.connect(
                 self.debug_vis.update_view, Qt.QueuedConnection
             )
         if self.debug_vis is not None:
-            self.behavior.update_ellipses.connect(
+            self.behavior.network_controller.update_ellipses.connect(
                 self.debug_vis.update_ellipses, Qt.QueuedConnection
             )
-        self.behavior.update_ellipses.emit(self.behavior.robot, self.behavior.allfish)
+        self.behavior.network_controller.update_ellipses.emit(self.behavior.behavior_robot, self.behavior.allfish)
 
         b_thread = threading.Thread(target=self.behavior.run_thread)
         b_thread.daemon = True

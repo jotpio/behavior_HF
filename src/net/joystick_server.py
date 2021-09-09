@@ -21,6 +21,7 @@ class JoystickServer(QObject):
             self.parent_behavior.change_robodir, Qt.QueuedConnection
         )
         self.debug = False
+        self.connected = False
 
     def run_thread(self):
         print("JOYSERVER: Started Thread!")

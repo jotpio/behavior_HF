@@ -23,6 +23,7 @@ from src.models.arena import Arena
 from src.models.fish import Fish
 from src.models.robot import Robot
 from src.models.agent import normalize
+from src.util.util import Util
 
 from PyQt5.sip import wrapinstance as wrapInstance
 
@@ -48,9 +49,9 @@ np.warnings.filterwarnings("error", category=np.VisibleDeprecationWarning)
 
 
 # class Behavior(PythonBehavior):
-class Behavior(QObject):
+class Behavior(PythonBehavior):
     def __init__(self, layout=None, DEBUG_VIS=None, config=None):
-        super().__init__()
+        PythonBehavior.__init__(self)
 
         self.robot = None
         self.world = None
@@ -123,10 +124,10 @@ class Behavior(QObject):
         if self.debug_vis is not None:
             self.setup_debug_vis()
 
-        # catch key events
-        if self.debug_vis is not None:
-            app = QApplication.instance()
-            app.installEventFilter(self)
+        # # catch key events
+        # if self.debug_vis is not None:
+        #     app = QApplication.instance()
+        #     app.installEventFilter(self)
         self.movelist = []
 
 
@@ -274,7 +275,7 @@ class Behavior(QObject):
         self.world = None
 
         # stop network threads
-        self.network_controller.close()
+        self.network_controller.exit()
 
     #
     # looping method
@@ -319,21 +320,21 @@ class Behavior(QObject):
 
 
         # priotize random target button when clicked
-        # if not robots and self.robot:
-        #     return [
-        #         RobotActionFlush(self.robot.uid),
-        #         RobotActionHalt(self.robot.uid, 0)
-        #     ]
-        # else:
-        #     if self.target is not None:
-        #         target = self.target
-        #         self.target = None
-        #         return [
-        #             RobotActionFlush(self.robot.uid),
-        #             RobotActionToTarget(
-        #                 self.robot.uid, 0, (target[0], target[1])
-        #             ),
-        #         ]
+        if not robots:
+            return [
+                RobotActionFlush(self.robot.uid),
+                RobotActionHalt(self.robot.uid, 0)
+            ]
+        else:
+            if self.target is not None:
+                target = self.target
+                self.target = None
+                return [
+                    RobotActionFlush(self.robot.uid),
+                    RobotActionToTarget(
+                        self.robot.uid, 0, (target[0], target[1])
+                    ),
+                ]
 
         # wasd robo movement
         if self.behavior_robot.debug and self.behavior_robot.controlled:
@@ -376,12 +377,12 @@ class Behavior(QObject):
             #move robot
             target = self.behavior_robot.pos + (self.behavior_robot.new_dir * self.behavior_robot.max_speed)
             print(f"Move robot to new location {target}")
-            # action = [
-            #             RobotActionFlush(self.robot.uid),
-            #             RobotActionToTarget(
-            #                 self.robot.uid, 0, (target[0], target[1])
-            #             ),
-            #         ]
+            action = [
+                        RobotActionFlush(self.robot.uid),
+                        RobotActionToTarget(
+                            self.robot.uid, 0, (target[0], target[1])
+                        ),
+                    ]
             #move all fish
             for f in self.allfish:
                 f.move()
@@ -447,6 +448,10 @@ class Behavior(QObject):
             out.append(fish_dict)
 
         return out
+
+    def transform_cm_to_px(pos):
+
+        return np.interp(pos,[1,512],[5,10])
 
     def queue_command(self, command):
         self.com_queue.put((command[0], command[1]))
