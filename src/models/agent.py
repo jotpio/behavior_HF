@@ -231,6 +231,8 @@ class Agent:
         # new orientation is orientation of new direction vector
         self.ori = math.degrees(math.atan2(self.dir[1], self.dir[0]))
 
+        
+
         # print(pos, self.pos)
 
     def check_inside_arena(self, next_pos):
@@ -280,6 +282,7 @@ class Agent:
             self.zoo = zoo
         if zoa:
             self.zoa = zoa
+
 
 
 @jit(nopython=True)

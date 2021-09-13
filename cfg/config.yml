@@ -1,7 +1,6 @@
 DEBUG:
   console: true
   visualisation: true
-  skip_ticks: false
   optimisation: false
   optimisation_individual : false
   debug_following : true
@@ -17,8 +16,8 @@ DEFAULTS:
   vision_angle: 300
 
   error_deg: 10
-  max_speed: 10
-  max_turn_rate: 150
+  max_speed: 5
+  max_turn_rate: 200
 
   time_step: 0.05 #0.05 = 20fps
 

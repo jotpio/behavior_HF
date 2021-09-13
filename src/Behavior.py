@@ -21,8 +21,10 @@ from src.net.network_controller import NetworkController
 from src.ui.parameter_ui import Parameter_UI
 from src.models.arena import Arena
 from src.models.fish import Fish
+from src.models.agent import attract, repulse, allign, check_in_radii_vision
 from src.models.robot import Robot
 from src.models.agent import normalize
+from src.util.util import Util
 
 from PyQt5.sip import wrapinstance as wrapInstance
 
@@ -63,6 +65,7 @@ class Behavior(QObject):
             print(f"Behavior: config path: {path}")
             self.config = yaml.safe_load(open(path))
 
+        self.util = Util(self.config)
         self.debug_vis = DEBUG_VIS
         # if DEBUG_VIS is None:
         #     self.debug_vis = DebugVisualization(self.config, RT_MODE)
@@ -107,10 +110,17 @@ class Behavior(QObject):
 
         # initialize robot
         self.behavior_robot = Robot(self.arena, self.config)
+        self.behavior_robot.auto_move = True
+        self.behavior_robot_auto = True
         self.controlled = False
+        self.trigger_next_robot_step = False
+        self.flush_robot_target = False
+
 
         # # initialize fish
         self.reset_fish(self.config["DEFAULTS"]["number_of_fish"])
+
+        self.initiate_numba()
 
         # step logger
         self._step_logger = []
@@ -131,6 +141,12 @@ class Behavior(QObject):
 
 
         print("Behavior: Initialized!")
+
+    def initiate_numba(self):
+        repulse(np.asarray([[0.0,0.0]]), np.asarray([0,0]))
+        allign(np.asarray([[0.0,0.0]]))
+        attract(np.asarray([[0.0,0.0]]), np.asarray([0,0]))
+        check_in_radii_vision(np.asarray([[0.0,0.0]]), np.asarray([[0.0,0.0]]), np.asarray([[0.0,0.0]]), 0.0, np.asarray([0.0,0.0]), np.asarray([0.0,0.0]))
 
     def setup_parameter_layout(self):
         print("Behavior: Setting up parameter layout")
@@ -203,6 +219,19 @@ class Behavior(QObject):
         zone_dir = {"zoa": val}
         self.change_zones(zone_dir)
 
+    def on_auto_robot_checkbox_changed(self, val):
+        self.behavior_robot_auto = val
+        self.behavior_robot.auto_move = val
+        self.parameter_ui.next_robot_step.setEnabled(not val)
+        self.parameter_ui.flush_robot_button.setEnabled(not val)
+
+    #if auto robot movement is disabled then the next automatic robot movement target can be triggered by this button or manually by the joystick movement
+    def on_next_robot_step_clicked(self):
+        self.trigger_next_robot_step = True
+
+    def on_flush_robot_target_clicked(self):
+        self.flush_robot_target = True
+
     def on_dark_mode_checkbox_changed(self):
         if self.debug_vis:
             self.debug_vis.toggle_dark_mode(
@@ -217,28 +246,28 @@ class Behavior(QObject):
             if key == Qt.Key_W:
                 self.behavior_robot.debug = True
                 self.behavior_robot.controlled = True
-                self.joystick_server.debug = True
+                self.network_controller.joystick_server.debug = True
                 # new_dir += np.asarray([0,-1])
                 self.movelist.append([0, -1])
                 # print("W")
             if key == Qt.Key_A:
                 self.behavior_robot.debug = True
                 self.behavior_robot.controlled = True
-                self.joystick_server.debug = True
+                self.network_controller.joystick_server.debug = True
                 # new_dir += np.asarray([-1,0])
                 self.movelist.append([-1, 0])
                 # print("A")
             if key == Qt.Key_S:
                 self.behavior_robot.debug = True
                 self.behavior_robot.controlled = True
-                self.joystick_server.debug = True
+                self.network_controller.joystick_server.debug = True
                 # new_dir += np.asarray([0,1])
                 self.movelist.append([0, 1])
                 # print("S")
             if key == Qt.Key_D:
                 self.behavior_robot.debug = True
                 self.behavior_robot.controlled = True
-                self.joystick_server.debug = True
+                self.network_controller.joystick_server.debug = True
                 # new_dir += np.asarray([1,0])
                 self.movelist.append([1, 0])
                 # print("D")
@@ -249,7 +278,7 @@ class Behavior(QObject):
         elif event.type() == QEvent.KeyRelease and obj is self.debug_vis.viz_window:
             self.behavior_robot.debug = False
             self.behavior_robot.controlled = self.controlled
-            self.joystick_server.debug = False
+            self.network_controller.joystick_server.debug = False
             return True
 
         elif event.type() == QEvent.Wheel and obj is self.debug_vis.viz_window:
@@ -290,65 +319,27 @@ class Behavior(QObject):
             command = self.com_queue.get()
             if self.config["DEBUG"]["console"]:
                 print(command)
-            # last movement command is used (LIFO)
-            if command[0] == "change_robodir":
+            try:
                 func = getattr(self, command[0])
                 args = command[1:]
                 func(*args)
-                # print(command[1:])
-            else:
-                try:
-                    func = getattr(self, command[0])
-                    args = command[1:]
-                    func(*args)
-                except:
-                    print(f"Command not found or error in command execution! {command}")
+            except:
+                print(f"Command not found or error in command execution! {command}")
 
-        # update behavior robot position if RT loaded
-        if RT_MODE:
-            robots = [r for r in robots if r.uid == self.robot.uid]
+        # # wasd robo movement
+        # if self.behavior_robot.debug and self.behavior_robot.controlled:
+        #     robomove1 = np.unique(np.asarray(self.movelist), axis=0)
+        #     robomove2 = np.sum(robomove1, axis=0)
+        #     robomove3 = (
+        #         robomove2 / np.linalg.norm(robomove2)
+        #         if np.linalg.norm(robomove2) != 0
+        #         else self.behavior_robot.dir
+        #     )
+        #     self.behavior_robot.new_dir = robomove3
+        #     # print(robomove1, robomove2, robomove3)
+        # self.movelist = []
 
-            pos = robots[0].position
-            # print(f"pos: {pos}")
-            self.behavior_robot.pos = np.asarray([pos[0], pos[1]])
-            dir = robots[0].orientation
-            # print(f"dir: {dir}")
-            self.behavior_robot.dir = np.asarray([dir[0], dir[1]])
-            self.behavior_robot.ori = math.degrees(math.atan2(dir[1], dir[0]))
-            self.behavior_robot.dir_norm = normalize(self.behavior_robot.dir)
-
-
-        # priotize random target button when clicked
-        # if not robots and self.robot:
-        #     return [
-        #         RobotActionFlush(self.robot.uid),
-        #         RobotActionHalt(self.robot.uid, 0)
-        #     ]
-        # else:
-        #     if self.target is not None:
-        #         target = self.target
-        #         self.target = None
-        #         return [
-        #             RobotActionFlush(self.robot.uid),
-        #             RobotActionToTarget(
-        #                 self.robot.uid, 0, (target[0], target[1])
-        #             ),
-        #         ]
-
-        # wasd robo movement
-        if self.behavior_robot.debug and self.behavior_robot.controlled:
-            robomove1 = np.unique(np.asarray(self.movelist), axis=0)
-            robomove2 = np.sum(robomove1, axis=0)
-            robomove3 = (
-                robomove2 / np.linalg.norm(robomove2)
-                if np.linalg.norm(robomove2) != 0
-                else self.behavior_robot.dir
-            )
-            self.behavior_robot.new_dir = robomove3
-            # print(robomove1, robomove2, robomove3)
-        self.movelist = []
-
-        # update all fish one time step forward (tick)
+        # TICK - update all fish one time step forward (tick)
         all_agents = [self.behavior_robot]
         all_agents.extend(self.allfish)
         all_pos = np.asarray([np.array(a.pos, dtype=np.float64) for a in all_agents])
@@ -356,38 +347,16 @@ class Behavior(QObject):
         dist_m = distance_matrix(all_pos, all_pos)
 
         for id_f, f in enumerate(all_agents):
-            if self.config["DEBUG"]["skip_ticks"]:
-                if not self.skip_tick:
-                    f.tick(all_pos, all_dir, dist_m[id_f])
-            else:
-                f.tick(all_pos, all_dir, dist_m[id_f])
-                if id_f != 0:
-                    robot_pos = all_pos[0]
-                    robot_dir = all_dir[0]
-                    f.check_following(robot_pos, robot_dir)
-        if self.skip_tick:
-            self.skip_tick = False
-        else:
-            self.skip_tick = True
+            f.tick(all_pos, all_dir, dist_m[id_f])
+            # check if fish following the robot
+            if id_f != 0:
+                robot_pos = all_pos[0]
+                robot_dir = all_dir[0]
+                f.check_following(robot_pos, robot_dir)
 
-
-        action=[]
-        if RT_MODE:
-            #move robot
-            target = self.behavior_robot.pos + (self.behavior_robot.new_dir * self.behavior_robot.max_speed)
-            print(f"Move robot to new location {target}")
-            # action = [
-            #             RobotActionFlush(self.robot.uid),
-            #             RobotActionToTarget(
-            #                 self.robot.uid, 0, (target[0], target[1])
-            #             ),
-            #         ]
-            #move all fish
-            for f in self.allfish:
-                f.move()
-        else:
-            for f in all_agents:
-                f.move()
+        # MOVE
+        for f in all_agents:
+            f.move()
 
         # Update fish in tracking view and send positions
         self.network_controller.update_positions.emit(self.serialize())
@@ -406,7 +375,7 @@ class Behavior(QObject):
                 f"mean tick takes {mean_exec_time} seconds; last tick took {exec_time} seconds"
             )
 
-        return action
+        return []
 
     def run_thread(self):
         timestep = 0
@@ -431,6 +400,7 @@ class Behavior(QObject):
         robo_dict = {
             "id": self.behavior_robot.id,
             "orientation": np.around(self.behavior_robot.ori, decimals=2),
+            "direction": self.behavior_robot.dir.tolist(),
             "position": np.rint(self.behavior_robot.pos).tolist(),
         }
         out.append(robo_dict)
@@ -439,6 +409,7 @@ class Behavior(QObject):
             fish_dict = {
                 "id": a.id,
                 "orientation": np.around(a.ori, decimals=2),
+                "direction": a.dir.tolist(),
                 "position": np.rint(a.pos).tolist(),
                 "following": a.following,
                 "repulsed": a.repulsed,
@@ -450,7 +421,7 @@ class Behavior(QObject):
 
     def queue_command(self, command):
         self.com_queue.put((command[0], command[1]))
-        print("New command queued!")
+        # print("New command queued!")
 
     #
     # Commands
@@ -486,7 +457,7 @@ class Behavior(QObject):
     def change_robodir(self, dir):
         np_dir = np.asarray(dir)
         dir_len = np.linalg.norm(np_dir)
-        self.behavior_robot.new_dir = np_dir / dir_len if dir_len != 0 else np.asarray([0, 0])
+        self.behavior_robot.new_dir = np_dir / dir_len if dir_len != 0 and dir_len > 1 else np_dir
 
     def change_zones(self, zone_dir):
         self.zor = zone_dir.get("zor", self.zor)

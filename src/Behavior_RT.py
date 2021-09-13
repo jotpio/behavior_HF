@@ -22,7 +22,7 @@ from src.ui.parameter_ui import Parameter_UI
 from src.models.arena import Arena
 from src.models.fish import Fish
 from src.models.robot import Robot
-from src.models.agent import normalize
+from src.models.agent import attract, repulse, allign, check_in_radii_vision, normalize
 from src.util.util import Util
 
 from PyQt5.sip import wrapinstance as wrapInstance
@@ -48,7 +48,6 @@ except:
 np.warnings.filterwarnings("error", category=np.VisibleDeprecationWarning)
 
 
-# class Behavior(PythonBehavior):
 class Behavior(PythonBehavior):
     def __init__(self, layout=None, DEBUG_VIS=None, config=None):
         PythonBehavior.__init__(self)
@@ -64,9 +63,8 @@ class Behavior(PythonBehavior):
             print(f"Behavior: config path: {path}")
             self.config = yaml.safe_load(open(path))
 
-        self.debug_vis = DEBUG_VIS
-        # if DEBUG_VIS is None:
-        #     self.debug_vis = DebugVisualization(self.config, RT_MODE)
+        
+        self.util = Util(self.config)
 
         self.default_num_fish = self.config["DEFAULTS"]["number_of_fish"]
         self.optimisation = self.config["DEBUG"]["optimisation"]
@@ -99,7 +97,6 @@ class Behavior(PythonBehavior):
 
         # time step in seconds
         self.time_step = self.config["DEFAULTS"]["time_step"]
-        self.skip_tick = False
 
         # arena
         self.arena = Arena(
@@ -108,10 +105,27 @@ class Behavior(PythonBehavior):
 
         # initialize robot
         self.behavior_robot = Robot(self.arena, self.config)
+        self.behavior_robot_auto = False
         self.controlled = False
+        self.trigger_next_robot_step = False
+        self.flush_robot_target = False
 
         # # initialize fish
         self.reset_fish(self.config["DEFAULTS"]["number_of_fish"])
+
+        self.initiate_numba()
+
+        # setup debug viz
+        self.debug_vis = DEBUG_VIS
+        if DEBUG_VIS is None and self.config["DEBUG"]["visualisation"]:
+            self.debug_vis = DebugVisualization(self.config)
+            self.network_controller.update_ellipses.connect(
+                self.debug_vis.update_ellipses, Qt.QueuedConnection
+            )
+            self.network_controller.update_positions.connect(
+                self.debug_vis.update_view, Qt.QueuedConnection
+            )
+            self.network_controller.update_ellipses.emit(self.behavior_robot, self.allfish)
 
         # step logger
         self._step_logger = []
@@ -132,6 +146,12 @@ class Behavior(PythonBehavior):
 
 
         print("Behavior: Initialized!")
+
+    def initiate_numba(self):
+        repulse(np.asarray([[0.0,0.0]]), np.asarray([0,0]))
+        allign(np.asarray([[0.0,0.0]]))
+        attract(np.asarray([[0.0,0.0]]), np.asarray([0,0]))
+        check_in_radii_vision(np.asarray([[0.0,0.0]]), np.asarray([[0.0,0.0]]), np.asarray([[0.0,0.0]]), 0.0, np.asarray([0.0,0.0]), np.asarray([0.0,0.0]))
 
     def setup_parameter_layout(self):
         print("Behavior: Setting up parameter layout")
@@ -160,6 +180,7 @@ class Behavior(PythonBehavior):
         #
         self.parent_layout.addLayout(self.parameter_ui)
 
+# region <UI slots>
     def on_random_target_clicked(self):
         self.target = random.randint(10, 45), random.randint(10, 45)
         if self.debug_vis is not None:
@@ -203,6 +224,19 @@ class Behavior(PythonBehavior):
     def on_zoa_spinbox_valueChanged(self, val):
         zone_dir = {"zoa": val}
         self.change_zones(zone_dir)
+
+    def on_auto_robot_checkbox_changed(self, val):
+        self.behavior_robot_auto = val
+        self.behavior_robot.auto_move = val
+        self.parameter_ui.next_robot_step.setEnabled(not val)
+        self.parameter_ui.flush_robot_button.setEnabled(not val)
+
+    #if auto robot movement is disabled then the next automatic robot movement target can be triggered by this button or manually by the joystick movement
+    def on_next_robot_step_clicked(self):
+        self.trigger_next_robot_step = True
+
+    def on_flush_robot_target_clicked(self):
+        self.flush_robot_target = True
 
     def on_dark_mode_checkbox_changed(self):
         if self.debug_vis:
@@ -258,6 +292,8 @@ class Behavior(PythonBehavior):
 
         return False
 
+#endregion
+    
     def supported_timesteps(self):
         print("Behavior: supported_timesteps called")
         return []
@@ -291,33 +327,32 @@ class Behavior(PythonBehavior):
             command = self.com_queue.get()
             if self.config["DEBUG"]["console"]:
                 print(command)
-            # last movement command is used (LIFO)
-            if command[0] == "change_robodir":
+            try:
                 func = getattr(self, command[0])
                 args = command[1:]
                 func(*args)
-                # print(command[1:])
-            else:
-                try:
-                    func = getattr(self, command[0])
-                    args = command[1:]
-                    func(*args)
-                except:
-                    print(f"Command not found or error in command execution! {command}")
+            except:
+                print(f"Command not found or error in command execution! {command}")
 
         # update behavior robot position if RT loaded
         if RT_MODE:
             robots = [r for r in robots if r.uid == self.robot.uid]
 
-            pos = robots[0].position
-            # print(f"pos: {pos}")
-            self.behavior_robot.pos = np.asarray([pos[0], pos[1]])
+            pos_cm = robots[0].position
+            pos_px = self.util.map_cm_to_px(pos_cm)
+            self.behavior_robot.pos = np.asarray([pos_px[0], pos_px[1]])
+
             dir = robots[0].orientation
-            # print(f"dir: {dir}")
             self.behavior_robot.dir = np.asarray([dir[0], dir[1]])
             self.behavior_robot.ori = math.degrees(math.atan2(dir[1], dir[0]))
             self.behavior_robot.dir_norm = normalize(self.behavior_robot.dir)
 
+        # check for flush robot target triggered
+        if self.flush_robot_target:
+            return [
+                RobotActionFlush(self.robot.uid),
+                RobotActionHalt(self.robot.uid, 0)
+            ]
 
         # priotize random target button when clicked
         if not robots:
@@ -336,20 +371,7 @@ class Behavior(PythonBehavior):
                     ),
                 ]
 
-        # wasd robo movement
-        if self.behavior_robot.debug and self.behavior_robot.controlled:
-            robomove1 = np.unique(np.asarray(self.movelist), axis=0)
-            robomove2 = np.sum(robomove1, axis=0)
-            robomove3 = (
-                robomove2 / np.linalg.norm(robomove2)
-                if np.linalg.norm(robomove2) != 0
-                else self.behavior_robot.dir
-            )
-            self.behavior_robot.new_dir = robomove3
-            # print(robomove1, robomove2, robomove3)
-        self.movelist = []
-
-        # update all fish one time step forward (tick)
+        # TICK - update all fish one time step forward (tick)
         all_agents = [self.behavior_robot]
         all_agents.extend(self.allfish)
         all_pos = np.asarray([np.array(a.pos, dtype=np.float64) for a in all_agents])
@@ -357,41 +379,42 @@ class Behavior(PythonBehavior):
         dist_m = distance_matrix(all_pos, all_pos)
 
         for id_f, f in enumerate(all_agents):
-            if self.config["DEBUG"]["skip_ticks"]:
-                if not self.skip_tick:
-                    f.tick(all_pos, all_dir, dist_m[id_f])
-            else:
-                f.tick(all_pos, all_dir, dist_m[id_f])
-                if id_f != 0:
-                    robot_pos = all_pos[0]
-                    robot_dir = all_dir[0]
-                    f.check_following(robot_pos, robot_dir)
-        if self.skip_tick:
-            self.skip_tick = False
-        else:
-            self.skip_tick = True
+            f.tick(all_pos, all_dir, dist_m[id_f])
+            # check if fish following the robot
+            if id_f != 0:
+                robot_pos = all_pos[0]
+                robot_dir = all_dir[0]
+                f.check_following(robot_pos, robot_dir)
 
-
+        # MOVE - move everything by new updated direction and speed 
         action=[]
-        if RT_MODE:
-            #move robot
-            target = self.behavior_robot.pos + (self.behavior_robot.new_dir * self.behavior_robot.max_speed)
-            print(f"Move robot to new location {target}")
+        for f in all_agents:
+                f.move()
+        if RT_MODE and self.behavior_robot_auto:
+            #get new robot target and move there
+            target = self.util.map_px_to_cm(self.behavior_robot.target_px)
             action = [
                         RobotActionFlush(self.robot.uid),
                         RobotActionToTarget(
                             self.robot.uid, 0, (target[0], target[1])
                         ),
                     ]
-            #move all fish
-            for f in self.allfish:
-                f.move()
-        else:
-            for f in all_agents:
-                f.move()
+        elif RT_MODE and self.trigger_next_robot_step:
+            # move to next target on pushbutton press
+            target = self.util.map_px_to_cm(self.behavior_robot.target_px)
+            print(f"Move robot to new location: {self.behavior_robot.pos}\ntarget px: {self.behavior_robot.target_px}\ntarget cm: {target}\ndir: {self.behavior_robot}\nrobot dir: {robots[0].orientation}")
+            action = [
+                        RobotActionFlush(self.robot.uid),
+                        RobotActionToTarget(
+                            self.robot.uid, 0, (target[0], target[1])
+                        ),
+                    ]
+            self.trigger_next_robot_step = False
 
         # Update fish in tracking view and send positions
         self.network_controller.update_positions.emit(self.serialize())
+
+        print("end of next speeds")
 
         if self.optimisation:
             end_time = time.time()
@@ -449,13 +472,9 @@ class Behavior(PythonBehavior):
 
         return out
 
-    def transform_cm_to_px(pos):
-
-        return np.interp(pos,[1,512],[5,10])
-
     def queue_command(self, command):
         self.com_queue.put((command[0], command[1]))
-        print("New command queued!")
+        # print("New command queued!")
 
     #
     # Commands

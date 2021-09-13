@@ -70,6 +70,18 @@ class Parameter_UI(QVBoxLayout):
         self.zoa_sb_layout.addWidget(self.zoa_spinbox)
         self.addLayout(self.zoa_sb_layout)
 
+        # auto robot toggle
+        self.auto_robot_checkbox = QCheckBox("Enable automatic robot movement")
+        self.addWidget(self.auto_robot_checkbox)
+
+        # next robot step
+        self.next_robot_step = QPushButton("Next robot step")
+        self.addWidget(self.next_robot_step)
+
+        # flush robot target
+        self.flush_robot_button = QPushButton("Flush robot target")
+        self.addWidget(self.flush_robot_button)
+
         # connect
 
         self.random_target.clicked.connect(
@@ -108,6 +120,16 @@ class Parameter_UI(QVBoxLayout):
             self.parent_behavior.on_zoa_spinbox_valueChanged, Qt.QueuedConnection
         )
 
+        self.auto_robot_checkbox.toggled.connect(
+                self.parent_behavior.on_auto_robot_checkbox_changed, Qt.QueuedConnection
+        )
+        self.next_robot_step.clicked.connect(
+            self.parent_behavior.on_next_robot_step_clicked, Qt.QueuedConnection
+        )
+        self.flush_robot_button.clicked.connect(
+            self.parent_behavior.on_flush_robot_target_clicked, Qt.QueuedConnection
+        )
+
         # configure checkboxes
         if not self.RT_MODE:
             self.zoa_checkbox.setChecked(False)
@@ -115,3 +137,6 @@ class Parameter_UI(QVBoxLayout):
             self.zor_checkbox.setChecked(False)
             self.vision_checkbox.setChecked(False)
             self.dark_mode_checkbox.setChecked(True)
+        self.auto_robot_checkbox.setChecked(True)
+        self.next_robot_step.setEnabled(not self.auto_robot_checkbox.isChecked())
+        self.flush_robot_button.setEnabled(not self.auto_robot_checkbox.isChecked())

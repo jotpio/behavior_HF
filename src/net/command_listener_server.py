@@ -36,6 +36,7 @@ class CommandListenerServer(QObject):
                 if self.socket:
                     if self.connected:
                         self.socket.shutdown(1)
+                        self.connected = False
                     self.socket.close()
                     self.socket = None
                 time.sleep(0.3)
@@ -59,15 +60,15 @@ class CommandListenerServer(QObject):
                                 except:
                                     print("COMSERVER: Error decoding message!")
                                 amount_received += len(data)
-                                print('COMSERVER: Received "%s"' % data)
+                                # print('COMSERVER: Received "%s"' % data)
 
                                 self.send_command.emit(data)
 
                     except:
                         print("COMSERVER: Socket error!")
 
-                        if self.socket:
-                            # self.socket.shutdown(SHUT_WR)
+                        if self.socket and not self.connected:
+                            self.socket.shutdown(SHUT_WR)
                             self.socket.close()
                             self.connected = False
                         self.socket = None
@@ -76,7 +77,7 @@ class CommandListenerServer(QObject):
                 pass
             finally:
                 print("COMSERVER: Closing socket")
-                if self.socket:
+                if self.socket and not self.connected:
                     self.socket.shutdown(SHUT_WR)
                     self.socket.close()
                     self.connected = False

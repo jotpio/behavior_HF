@@ -1,4 +1,5 @@
-from scipy.interpolate import interp1d
+import numpy as np
+
 
 class Util:
     def __init__(self, config):
@@ -9,14 +10,28 @@ class Util:
         self.arena_w = self.config["ARENA"]["width"]
         self.arena_h = self.config["ARENA"]["height"]
 
-        self.cm_to_px_mapper = interp1d([0,self.world_w],[0,self.arena_w])
-        self.px_to_cm_mapper = interp1d([0,self.arena_w],[0,self.world_w]) 
+        self.arena_to_world_ratio = self.world_w / self.arena_w
+        self.world_to_arena_ratio = self.arena_w / self.world_w
+
+        # self.cm_to_px_mapper = interp1d([0,self.world_w],[0,self.arena_w])
+        # self.px_to_cm_mapper = interp1d([0,self.arena_w],[0,self.world_w])
 
     # mapping only works with a square arena and world
     def map_cm_to_px(self, v):
-        return self.cm_to_px_mapper(v)
+        return np.asarray(v) * self.world_to_arena_ratio
+        # try:
+        #     return self.cm_to_px_mapper(v)
+        # except:
+        #     print(f"Error in cm to px mapping: {v}")
+        #     return v
     
 
     # mapping only works with a square arena and world
     def map_px_to_cm(self, v):
-        return self.px_to_cm_mapper(v)
+        return np.asarray(v) * self.arena_to_world_ratio
+
+        # try:
+        #     return self.px_to_cm_mapper(v)
+        # except:
+        #     print(f"Error in px to cm mapping: {v}")
+        #     return v

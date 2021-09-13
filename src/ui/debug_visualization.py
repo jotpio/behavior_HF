@@ -11,6 +11,7 @@ class DebugVisualization(QObject):
         super().__init__()
 
         self.config = config
+        self.RT_MODE = False
 
         self.fish_ellipses = []
         self.arena = None
@@ -24,20 +25,22 @@ class DebugVisualization(QObject):
 
         self.app = QApplication(sys.argv)
 
-        self.window = QWidget()
-        self.window.setWindowTitle("Parameter window")
-        self.window.setGeometry(100, 100, 200, 200)
-        self.window.move(60, 15)
-        self.layout = QVBoxLayout()
-        title_label = QLabel("<h1>Parameter Window</h1>")
-        self.layout.addWidget(title_label)
-        title_label.move(60, 15)
+        if not self.RT_MODE:
+            self.window = QWidget()
+            self.window.setWindowTitle("Parameter window")
+            self.window.setGeometry(100, 100, 200, 200)
+            # self.window.move(60, 15)
+            self.layout = QVBoxLayout()
+            title_label = QLabel("<h1>Parameter Window</h1>")
+            self.layout.addWidget(title_label)
+            title_label.move(60, 15)
 
-        self.window.setLayout(self.layout)
-        self.window.show()
+            self.window.setLayout(self.layout)
+            self.window.show()
 
         # Visualization
         self.viz_window = QWidget()
+        self.viz_window.setAttribute(Qt.WA_DeleteOnClose)
         self.viz_window.setWindowTitle("Visualisation window")
         self.viz_layout = QVBoxLayout()
         self.scene = QGraphicsScene()
