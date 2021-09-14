@@ -29,25 +29,28 @@ class Fish(Agent):
         )
 
     def check_following(self, robot_pos, robot_dir):
-        # robot in attaction zone
-        if self.influenced_by_robot:
-            # check if robot swims in same direction as fish
-            # orientation difference can't be larger than max turning rate * 10 (roughly same direction)
-            # calculate angle between both directions
-            inner = np.inner(self.dir, robot_dir)
-            norms = np.linalg.norm(self.dir) * np.linalg.norm(robot_dir)
-            ori_diff = inner / norms
-            roughly_same_dir = ori_diff >= self.cos_max_turn_per_time_step
+        try:
+            # robot in attaction zone
+            if self.influenced_by_robot:
+                # check if robot swims in same direction as fish
+                # orientation difference can't be larger than max turning rate * 10 (roughly same direction)
+                # calculate angle between both directions
+                inner = np.inner(self.dir, robot_dir)
+                norms = np.linalg.norm(self.dir) * np.linalg.norm(robot_dir)
+                ori_diff = inner / norms
+                roughly_same_dir = ori_diff >= self.cos_max_turn_per_time_step
 
-            # robot must be in front of fish
-            # cos of angle between (robot_pos-self.pos) vector and self.dir cannot be smaller than 0 (angle can't be larger than pi/2 -> 90degrees) / smaller than 60 -> cos(radians(80)) = 0.17365152758
-            between_v = robot_pos - self.pos
-            inner = np.inner(between_v, self.dir)
-            norms = np.linalg.norm(between_v) * np.linalg.norm(self.dir)
-            ori_diff2 = inner / norms
-            in_front = ori_diff2 > 0.17365152758
+                # robot must be in front of fish
+                # cos of angle between (robot_pos-self.pos) vector and self.dir cannot be smaller than 0 (angle can't be larger than pi/2 -> 90degrees) / smaller than 60 -> cos(radians(80)) = 0.17365152758
+                between_v = robot_pos - self.pos
+                inner = np.inner(between_v, self.dir)
+                norms = np.linalg.norm(between_v) * np.linalg.norm(self.dir)
+                ori_diff2 = inner / norms
+                in_front = ori_diff2 > 0.17365152758
 
-            if roughly_same_dir and in_front:
-                self.following = True
-                return
-        self.following = False
+                if roughly_same_dir and in_front:
+                    self.following = True
+                    return
+            self.following = False
+        except:
+            print("FISH: Error while following check")

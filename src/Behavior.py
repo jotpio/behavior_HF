@@ -400,7 +400,6 @@ class Behavior(QObject):
         robo_dict = {
             "id": self.behavior_robot.id,
             "orientation": np.around(self.behavior_robot.ori, decimals=2),
-            "direction": self.behavior_robot.dir.tolist(),
             "position": np.rint(self.behavior_robot.pos).tolist(),
         }
         out.append(robo_dict)
@@ -409,7 +408,6 @@ class Behavior(QObject):
             fish_dict = {
                 "id": a.id,
                 "orientation": np.around(a.ori, decimals=2),
-                "direction": a.dir.tolist(),
                 "position": np.rint(a.pos).tolist(),
                 "following": a.following,
                 "repulsed": a.repulsed,
@@ -455,9 +453,14 @@ class Behavior(QObject):
         self.controlled = flag
 
     def change_robodir(self, dir):
-        np_dir = np.asarray(dir)
-        dir_len = np.linalg.norm(np_dir)
-        self.behavior_robot.new_dir = np_dir / dir_len if dir_len != 0 and dir_len > 1 else np_dir
+        #dir cannot be [0,0]
+        if not (np.abs(dir) == np.asarray([0.0,0.0])).all():
+            np_dir = np.asarray(dir)
+            dir_len = np.linalg.norm(np_dir)
+            self.behavior_robot.max_speed = self.config["DEFAULTS"]["max_speed"]
+            self.behavior_robot.new_dir = np_dir / dir_len if dir_len != 0 and dir_len > 1 else np_dir
+        else:
+            self.behavior_robot.max_speed = 0
 
     def change_zones(self, zone_dir):
         self.zor = zone_dir.get("zor", self.zor)

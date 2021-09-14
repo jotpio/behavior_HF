@@ -1,46 +1,17 @@
 import time
 from socket import *
 import json
+from PyQt5.QtCore import Qt, pyqtSignal, QObject
+from src.net.client import ServerListenerThread
 
 
-class PositionClient:
-    def __init__(self, config=None):
-        print("POSCLIENT: Starting position client!")
-        self.config = config
-        self.host = "127.0.0.1"
-        self.port = config["NETWORK"]["position_port"] if config is not None else 13000
-        self.socket = socket(AF_INET, SOCK_STREAM)
-        self.server_address = (self.host, self.port)
-        self.connected = False
+
+class PositionClient(ServerListenerThread):
+    def __init__(self, parent, config=None):
+        super().__init__(parent=parent, type="position", config=config)
 
     def run_thread(self):
-        print("POSCLIENT: Started Thread!")
-        while not self.connected:
-            try:
-                # print("POSCLIENT: Trying to connect...")
-                self.socket = socket(AF_INET, SOCK_STREAM)
-                self.socket.connect(self.server_address)
-                self.connected = True
-                print("POSCLIENT: Connecting to %s port %s" % self.server_address)
-            except Exception as e:
-                time.sleep(1)  # Do nothing, just try again
-            while self.connected:
-                try:
-                    print("POSCLIENT: Testing connection...")
-                    data = self.socket.recv(8192).decode("utf-8")
-                    # print(f"data {data}")
-                    if data == "end connection":
-                        print("POSCLIENT: Connection closed")
-                        self.connected = False
-                        self.socket.close()
-                        self.socket = None
-                except:
-                    print("POSCLIENT: Socket closed!")
-                    self.connected = False
-                    if self.socket:
-                        self.socket.close()
-                        self.socket = None
-                    break
+        super().run_thread()
 
     def send_pos(self, pos):
         try:
@@ -50,7 +21,4 @@ class PositionClient:
                 self.socket.sendall(dump)
         except:
             print("POSCLIENT: Socket error!")
-            self.connected = False
-            if self.socket:
-                self.socket.close()
-                self.socket = None
+            self.close_socket()

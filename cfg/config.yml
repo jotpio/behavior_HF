@@ -3,7 +3,7 @@ DEBUG:
   visualisation: true
   optimisation: false
   optimisation_individual : false
-  debug_following : true
+  debug_following : false
   
   #network dummies
   dummy_joystick_client: false

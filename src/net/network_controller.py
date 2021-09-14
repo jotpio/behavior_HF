@@ -19,7 +19,7 @@ class NetworkController(QObject):
         self.config = config
 
     def setup_networking(self):
-        self.pos_client = PositionClient(self.config)
+        self.pos_client = PositionClient(self.behavior, self.config)
         self.command_server = CommandListenerServer(self.behavior, self.config)
         self.joystick_server = JoystickServer(self.behavior, self.config)
 
