@@ -40,8 +40,8 @@ class JoystickServer(ServerListenerThread):
                         amount_received += len(data)
                         # print(f"JOYSERVER: Received {data}")
 
-                        if data == "end control":
-                            self.control_robot.emit(["control_robot",False])
+                        if data == "end connection":
+                            self.close_socket()
 
                         if not self.debug:
                             parsed_data = self.parse_data(data)

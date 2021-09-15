@@ -57,6 +57,7 @@ class ServerListenerThread(QObject):
                 raise Exception(f"{self.type.upper()}: Could not connect socket!")
         except Exception as e:
             time.sleep(1)  # Do nothing, just try again
+            self.close_socket()
 
     def close_socket(self):
         self.socket.close()
