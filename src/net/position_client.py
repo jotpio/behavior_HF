@@ -10,11 +10,9 @@ class PositionClient(ServerListenerThread):
     def __init__(self, parent, config=None):
         super().__init__(parent=parent, type="position", config=config)
 
-    def run_thread(self):
-        super().run_thread()
-
     def send_pos(self, pos):
         try:
+            # print("POSCLIENT: Trying to send positions", flush=True)
             if self.connected and self.socket:
                 # print("POSCLIENT: Sending positions", flush=True)
                 dump = json.dumps(pos).encode("utf-8")

@@ -12,7 +12,7 @@ class ServerListenerThread(QObject):
         self.config = config
         self.host = "127.0.0.1"
         self.port = config["NETWORK"][f"{type}_port"]
-        self.socket = socket(AF_INET, SOCK_STREAM)
+        self.socket = None
         self.parent_behavior = parent
         
         self.debug = False

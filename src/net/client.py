@@ -14,7 +14,7 @@ class ServerListenerThread(QObject):
         self.config = config
         self.host = "127.0.0.1"
         self.port = config["NETWORK"][f"{type}_port"]
-        self.socket = socket(AF_INET, SOCK_STREAM)
+        self.socket = None
         self.server_address = (self.host, self.port)
         self.connected = False
         self.debug = False
@@ -46,7 +46,7 @@ class ServerListenerThread(QObject):
 
     def connect_socket(self):
         try:
-            # print("POSCLIENT: Trying to connect...")
+            print("POSCLIENT: Trying to connect...")
             if not self.connected and self.socket is None:
                 self.socket = socket(AF_INET, SOCK_STREAM)
                 self.socket.connect(self.server_address)
