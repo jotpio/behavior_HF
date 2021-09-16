@@ -10,13 +10,13 @@ DEBUG:
 
 DEFAULTS:
   number_of_fish: 5
-  zoa: 200
-  zoo: 80
-  zor: 10
+  zoa: 250
+  zoo: 100
+  zor: 40
   vision_angle: 300
 
   error_deg: 10
-  max_speed: 5
+  max_speed: 10
   max_turn_rate: 200
 
   time_step: 0.05 #0.05 = 20fps
@@ -37,13 +37,15 @@ NETWORK:
 
 ROBOT:
   controlled_from_start: false
+  max_battery_charge: 90
+  min_battery_charge: 50 
 
 ZONE_MODES:
   SMALL:
     zor: 10
-    zoo: 50
-    zoa: 200
-  LARGE:
-    zor: 20
     zoo: 100
+    zoa: 250
+  LARGE:
+    zor: 50
+    zoo: 150
     zoa: 300

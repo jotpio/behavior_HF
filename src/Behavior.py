@@ -30,9 +30,10 @@ from PyQt5.sip import wrapinstance as wrapInstance
 
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import Qt, pyqtSignal, QObject, QEvent
-#from PyQt5.QtWidgets import QLayout, QVBoxLayout, QPushButton
 
-#from PyQt5.QtGui import QPen, QBrush, QColor, QPainter
+# from PyQt5.QtWidgets import QLayout, QVBoxLayout, QPushButton
+
+# from PyQt5.QtGui import QPen, QBrush, QColor, QPainter
 
 try:
     from robotracker import (
@@ -41,6 +42,7 @@ try:
         RobotActionHalt,
         RobotActionToTarget,
     )
+
     RT_MODE = True
 except:
     print("No RoboTracker found!")
@@ -92,12 +94,16 @@ class Behavior(QObject):
             except:
                 print(f"Behavior: Error with layout wrapping. Creating own one...")
                 self.parent_layout = (
-                    layout if self.debug_vis is not None else self.setup_parameter_layout()
+                    layout
+                    if self.debug_vis is not None
+                    else self.setup_parameter_layout()
                 )
         else:
-            self.parent_layout = layout if self.debug_vis is not None else self.setup_parameter_layout()
-        
-        self.setup_parameter_ui() # fill parameter layout
+            self.parent_layout = (
+                layout if self.debug_vis is not None else self.setup_parameter_layout()
+            )
+
+        self.setup_parameter_ui()  # fill parameter layout
 
         # time step in seconds
         self.time_step = self.config["DEFAULTS"]["time_step"]
@@ -115,7 +121,6 @@ class Behavior(QObject):
         self.controlled = False
         self.trigger_next_robot_step = False
         self.flush_robot_target = False
-
 
         # # initialize fish
         self.reset_fish(self.config["DEFAULTS"]["number_of_fish"])
@@ -139,14 +144,20 @@ class Behavior(QObject):
             app.installEventFilter(self)
         self.movelist = []
 
-
         print("Behavior: Initialized!")
 
     def initiate_numba(self):
-        repulse(np.asarray([[0.0,0.0]]), np.asarray([0,0]))
-        allign(np.asarray([[0.0,0.0]]))
-        attract(np.asarray([[0.0,0.0]]), np.asarray([0,0]))
-        check_in_radii_vision(np.asarray([[0.0,0.0]]), np.asarray([[0.0,0.0]]), np.asarray([[0.0,0.0]]), 0.0, np.asarray([0.0,0.0]), np.asarray([0.0,0.0]))
+        repulse(np.asarray([[0.0, 0.0]]), np.asarray([0, 0]))
+        allign(np.asarray([[0.0, 0.0]]))
+        attract(np.asarray([[0.0, 0.0]]), np.asarray([0, 0]))
+        check_in_radii_vision(
+            np.asarray([[0.0, 0.0]]),
+            np.asarray([[0.0, 0.0]]),
+            np.asarray([[0.0, 0.0]]),
+            0.0,
+            np.asarray([0.0, 0.0]),
+            np.asarray([0.0, 0.0]),
+        )
 
     def setup_parameter_layout(self):
         print("Behavior: Setting up parameter layout")
@@ -194,14 +205,18 @@ class Behavior(QObject):
                 self.parameter_ui.zoa_checkbox.isChecked(),
             ]
             self.debug_vis.change_zones(zones)
-            self.network_controller.update_ellipses.emit(self.behavior_robot, self.allfish)
+            self.network_controller.update_ellipses.emit(
+                self.behavior_robot, self.allfish
+            )
 
     def on_vision_checkbox_changed(self):
         if self.debug_vis:
             self.debug_vis.toggle_vision_cones(
                 self.parameter_ui.vision_checkbox.isChecked()
             )
-            self.network_controller.update_ellipses.emit(self.behavior_robot, self.allfish)
+            self.network_controller.update_ellipses.emit(
+                self.behavior_robot, self.allfish
+            )
 
     def on_num_fish_spinbox_valueChanged(self, val):
         self.com_queue.put(("reset_fish", val))
@@ -225,7 +240,7 @@ class Behavior(QObject):
         self.parameter_ui.next_robot_step.setEnabled(not val)
         self.parameter_ui.flush_robot_button.setEnabled(not val)
 
-    #if auto robot movement is disabled then the next automatic robot movement target can be triggered by this button or manually by the joystick movement
+    # if auto robot movement is disabled then the next automatic robot movement target can be triggered by this button or manually by the joystick movement
     def on_next_robot_step_clicked(self):
         self.trigger_next_robot_step = True
 
@@ -237,7 +252,9 @@ class Behavior(QObject):
             self.debug_vis.toggle_dark_mode(
                 self.parameter_ui.dark_mode_checkbox.isChecked()
             )
-            self.network_controller.update_ellipses.emit(self.behavior_robot, self.allfish)
+            self.network_controller.update_ellipses.emit(
+                self.behavior_robot, self.allfish
+            )
 
     def eventFilter(self, obj, event) -> bool:
         if event.type() == QEvent.KeyPress and obj is self.debug_vis.viz_window:
@@ -452,13 +469,18 @@ class Behavior(QObject):
         self.behavior_robot.controlled = flag
         self.controlled = flag
 
+        if not flag:
+            self.behavior_robot.max_speed = self.config["DEFAULTS"]["max_speed"]
+
     def change_robodir(self, dir):
-        #dir cannot be [0,0]
-        if not (np.abs(dir) == np.asarray([0.0,0.0])).all():
+        # dir cannot be [0,0]
+        if not (np.abs(dir) == np.asarray([0.0, 0.0])).all():
             np_dir = np.asarray(dir)
             dir_len = np.linalg.norm(np_dir)
-            self.behavior_robot.max_speed = self.config["DEFAULTS"]["max_speed"]
-            self.behavior_robot.new_dir = np_dir / dir_len if dir_len != 0 and dir_len > 1 else np_dir
+            self.behavior_robot.max_speed = self.config["DEFAULTS"]["max_speed"] + 10
+            self.behavior_robot.new_dir = (
+                np_dir / dir_len if dir_len != 0 and dir_len > 1 else np_dir
+            )
         else:
             self.behavior_robot.max_speed = 0
 
@@ -472,7 +494,9 @@ class Behavior(QObject):
             f.change_zones(self.zor, self.zoo, self.zoa)
 
         if self.debug_vis:
-            self.network_controller.update_ellipses.emit(self.behavior_robot, self.allfish)
+            self.network_controller.update_ellipses.emit(
+                self.behavior_robot, self.allfish
+            )
 
         self.parameter_ui.zor_spinbox.setValue(self.zor)
         self.parameter_ui.zoo_spinbox.setValue(self.zoo)
@@ -493,9 +517,12 @@ class Behavior(QObject):
             f.change_zones(self.zor, self.zoo, self.zoa)
 
         if self.debug_vis:
-            self.network_controller.update_ellipses.emit(self.behavior_robot, self.allfish)
+            self.network_controller.update_ellipses.emit(
+                self.behavior_robot, self.allfish
+            )
 
         self.parameter_ui.zor_spinbox.setValue(self.zor)
         self.parameter_ui.zoo_spinbox.setValue(self.zoo)
         self.parameter_ui.zoa_spinbox.setValue(self.zoa)
+
     # endregion

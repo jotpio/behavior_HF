@@ -14,7 +14,7 @@ class ServerListenerThread(QObject):
         self.port = config["NETWORK"][f"{type}_port"]
         self.socket = None
         self.parent_behavior = parent
-        
+
         self.debug = False
         self.connected = False
 
@@ -31,7 +31,7 @@ class ServerListenerThread(QObject):
                     amount_received = 0
                     while amount_received < 4096:
                         data = self.conn.recv(4096).decode("utf-8")
-                        
+
                         if len(data) == 0:
                             self.print("Empty data; closing socket!")
                             self.close_socket()
@@ -54,13 +54,13 @@ class ServerListenerThread(QObject):
             self.socket.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
             self.socket.bind((self.host, self.port))
         else:
-            raise Exception(f"{self.type.upper()}: Could not initiate socket!") 
+            raise Exception(f"{self.type.upper()}: Could not initiate socket!")
 
     def close_socket(self):
         if self.socket:
             if self.connected:
                 self.socket.shutdown(1)
-        self.socket.close()
+            self.socket.close()
         self.socket = None
         self.connected = False
 
@@ -71,7 +71,7 @@ class ServerListenerThread(QObject):
         except:
             self.print(f"{self.port} already in use!")
             self.close_socket()
-            time.sleep(0.3) # wait a little before retrying socket bind
+            time.sleep(0.3)  # wait a little before retrying socket bind
             return False
 
         try:
@@ -84,14 +84,13 @@ class ServerListenerThread(QObject):
         except:
             self.print(f"{self.port} error while connecting to client!")
             self.close_socket()
-            time.sleep(0.3) # wait a little before retrying socket listen
+            time.sleep(0.3)  # wait a little before retrying socket listen
             return False
 
         return True
 
     def print(self, message):
-        print(f"{self.type.upper()}: {message}", flush=True)
-
+        print(f"\t{self.type.upper()}: {message}", flush=True)
 
     # Deleting (Calling destructor)
     def __del__(self):
