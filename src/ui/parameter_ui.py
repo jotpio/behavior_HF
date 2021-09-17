@@ -1,11 +1,12 @@
-from PyQt5.QtWidgets import *
+from PyQt5.QtWidgets import QVBoxLayout, QHBoxLayout, QPushButton, QLabel, QSpinBox, QCheckBox
 from PyQt5.QtCore import Qt, pyqtSignal, QObject, QEvent
 from PyQt5.QtGui import QPen, QBrush, QColor, QPainter
 
 
 class Parameter_UI(QVBoxLayout):
-    def __init__(self, parent_behavior, RT_MODE):
+    def __init__(self, parent_behavior, RT_MODE, config):
         super().__init__()
+        self.config = config
         self.RT_MODE = RT_MODE
         self.parent_behavior = parent_behavior
 
@@ -70,6 +71,34 @@ class Parameter_UI(QVBoxLayout):
         self.zoa_sb_layout.addWidget(self.zoa_spinbox)
         self.addLayout(self.zoa_sb_layout)
 
+        # target selector
+        self.target_layout = QHBoxLayout()
+        target_label_sel = QLabel("Select target:")
+        self.target_x = QSpinBox() 
+        self.target_x.setRange(0, 2000)
+        self.target_x.setValue(1000)
+        self.target_y = QSpinBox() 
+        self.target_y.setRange(0, 2000)
+        self.target_y.setValue(1000)
+        self.sel_target_pb = QPushButton("Go to target")
+        self.target_layout.addWidget(target_label_sel)
+        self.target_layout.addWidget(self.target_x)
+        self.target_layout.addWidget(self.target_y)
+        self.target_layout.addWidget(self.sel_target_pb)
+        self.addLayout(self.target_layout)
+
+        #turn buttons
+        self.turn_layout = QHBoxLayout()
+        self.turn_left_pb = QPushButton("Turn left")
+        self.turn_right_pb = QPushButton("Turn right")
+        self.turn_layout.addWidget(self.turn_left_pb)
+        self.turn_layout.addWidget(self.turn_right_pb)
+        self.addLayout(self.turn_layout)
+
+        #simulate charging
+        self.sim_charge_pb = QPushButton("Go to charging station")
+        self.addWidget(self.sim_charge_pb)
+
         # auto robot toggle
         self.auto_robot_checkbox = QCheckBox("Enable automatic robot movement")
         self.addWidget(self.auto_robot_checkbox)
@@ -130,6 +159,30 @@ class Parameter_UI(QVBoxLayout):
             self.parent_behavior.on_flush_robot_target_clicked, Qt.QueuedConnection
         )
 
+        self.sel_target_pb.clicked.connect(
+            self.parent_behavior.on_sel_target_pb_clicked, Qt.QueuedConnection
+        )
+
+        self.turn_left_pb.pressed.connect(
+            self.parent_behavior.on_turn_left_pb_clicked, Qt.QueuedConnection
+        )
+
+        self.turn_right_pb.pressed.connect(
+            self.parent_behavior.on_turn_right_pb_clicked, Qt.QueuedConnection
+        )
+
+        self.turn_left_pb.released.connect(
+            self.parent_behavior.on_turn_left_pb_released, Qt.QueuedConnection
+        )
+
+        self.turn_right_pb.released.connect(
+            self.parent_behavior.on_turn_right_pb_released, Qt.QueuedConnection
+        )
+
+        self.sim_charge_pb.clicked.connect(
+            self.parent_behavior.on_sim_charge_pb_clicked, Qt.QueuedConnection
+        )
+
         # configure checkboxes
         if not self.RT_MODE:
             self.zoa_checkbox.setChecked(False)
@@ -137,6 +190,7 @@ class Parameter_UI(QVBoxLayout):
             self.zor_checkbox.setChecked(False)
             self.vision_checkbox.setChecked(False)
             self.dark_mode_checkbox.setChecked(True)
-        self.auto_robot_checkbox.setChecked(True)
+            self.sel_target_pb.setEnabled(False)
+        self.auto_robot_checkbox.setChecked(not self.config["ROBOT"]["controlled_from_start"])
         self.next_robot_step.setEnabled(not self.auto_robot_checkbox.isChecked())
         self.flush_robot_button.setEnabled(not self.auto_robot_checkbox.isChecked())

@@ -1,6 +1,6 @@
 DEBUG:
   console: true
-  visualisation: true
+  visualisation: false
   optimisation: false
   optimisation_individual : false
   debug_following : false
@@ -9,7 +9,7 @@ DEBUG:
   dummy_joystick_client: false
 
 DEFAULTS:
-  number_of_fish: 5
+  number_of_fish: 0
   zoa: 200
   zoo: 80
   zor: 10
@@ -35,8 +35,11 @@ NETWORK:
   command_port: 13001
   joystick_port: 13002
 
+CHARGER:
+  position: [400, 1600]
+
 ROBOT:
-  controlled_from_start: false
+  controlled_from_start: true
 
 ZONE_MODES:
   SMALL:
