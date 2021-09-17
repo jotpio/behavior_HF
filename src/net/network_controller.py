@@ -24,17 +24,14 @@ class NetworkController(QObject):
         self.joystick_server = JoystickServer(self.behavior, self.config)
 
         # setup threads
-        print("Network: running position client")
         self.p_thread = threading.Thread(target=self.pos_client.run_thread)
         self.p_thread.daemon = True
         self.p_thread.start()
 
-        print("Network: running command server")
         self.c_thread = threading.Thread(target=self.command_server.run_thread)
         self.c_thread.daemon = True
         self.c_thread.start()
 
-        print("Network: running joystick server")
         self.j_thread = threading.Thread(target=self.joystick_server.run_thread)
         self.j_thread.daemon = True
         self.j_thread.start()
@@ -53,8 +50,8 @@ class NetworkController(QObject):
         # p_thread.join()
         # c_thread.join()
         # j_thread.join()
-            
-    def exit(self):    
+
+    def exit(self):
         self.p_thread.join()
         self.c_thread.join()
         self.j_thread.join()

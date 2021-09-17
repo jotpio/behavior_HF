@@ -1,6 +1,7 @@
 from src.models.agent import Agent, normalize
 import numpy as np
 import math
+import time
 
 
 class Robot(Agent):
@@ -12,16 +13,26 @@ class Robot(Agent):
         self.battery = 100
         self.new_dir = np.asarray([0.1, 0])
         self.real_robot = None
-        self.target_px = [0,0]
+        self.target_px = [0, 0]
         self.auto_move = False
+        self.reloading = False
+
+        self.min_battery_charge = self.config["ROBOT"]["min_battery_charge"]
+        self.max_battery_charge = self.config["ROBOT"]["max_battery_charge"]
 
     def tick(self, fishpos, fishdir, dists):
+        if self.reloading:
+            return
+
         if self.debug or not self.auto_move:
             return
         if not self.controlled:
             super().tick(fishpos, fishdir, dists)
 
     def move(self):
+        if self.reloading:
+            return
+
         if self.controlled:
             # print(f"ROBOT: new dir - {self.new_dir}")
             new_pos = self.pos + (self.new_dir * self.max_speed)
@@ -32,7 +43,7 @@ class Robot(Agent):
             self.dir_norm = normalize(self.dir)
             # new orientation is orientation of new direction vector
             self.ori = math.degrees(math.atan2(self.dir[1], self.dir[0]))
-        
+
         elif self.auto_move:
             if self.real_robot is not None:
                 # new position is old position plus new direction vector times speed
@@ -53,14 +64,30 @@ class Robot(Agent):
         else:
             print(f"ROBOT: No Movement")
 
-
-
     def reload(self):
         print("ROBOT: Reloading...")
-        pass
 
-    def get_battery_charge(self):
-        pass
+        # go to charging port
+        while not self.at_charging_port:
+            self.go_to_charging_port()
+
+        # charge if at charging port
+        if self.at_charging_port:
+            while self.battery < self.max_battery_charge:
+                print("ROBOT: Charging...")
+                time.sleep(1)
+            if self.battery >= self.max_battery_charge:
+                self.reloading = False
+                self.at_charging_port = False
+
+    def set_battery_charge(self, percent):
+        self.battery = percent
+
+        if self.battery < 50:
+            self.reload()
+
+    def go_to_charging_port():
+        pass  # TODO
 
     def set_robot(self, robot):
         self.real_robot = robot
