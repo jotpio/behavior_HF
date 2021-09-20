@@ -1,6 +1,6 @@
 DEBUG:
   console: true
-  visualisation: true
+  visualisation: false
   optimisation: false
   optimisation_individual : false
   debug_following : false
@@ -42,10 +42,10 @@ ROBOT:
 
 ZONE_MODES:
   SMALL:
-    zor: 10
-    zoo: 100
-    zoa: 250
-  LARGE:
-    zor: 50
-    zoo: 150
+    zor: 40
+    zoo: 300
     zoa: 300
+  LARGE:
+    zor: 40
+    zoo: 60
+    zoa: 100
