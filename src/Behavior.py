@@ -16,14 +16,12 @@ path_root = Path(__file__).parents[1]
 sys.path.append(str(path_root))
 # print(sys.path)
 
-from src.ui.debug_visualization import DebugVisualization
 from src.net.network_controller import NetworkController
 from src.ui.parameter_ui import Parameter_UI
 from src.models.arena import Arena
 from src.models.fish import Fish
-from src.models.agent import attract, repulse, allign, check_in_radii_vision
 from src.models.robot import Robot
-from src.models.agent import normalize
+from src.models.agent import attract, repulse, allign, check_in_radii_vision, normalize
 from src.util.util import Util
 
 from PyQt5.sip import wrapinstance as wrapInstance
@@ -83,31 +81,8 @@ class Behavior(QObject):
         self.network_controller = NetworkController(self, self.config)
         self.network_controller.setup_networking()
 
-        # # check debug_vis and RT_MODE conflict
-        # if RT_MODE:
-        #     assert self.debug_vis is None
-
-        # setup ui
-        if RT_MODE:
-            try:
-                self.parent_layout = wrapInstance(layout, QLayout)
-            except:
-                print(f"Behavior: Error with layout wrapping. Creating own one...")
-                self.parent_layout = (
-                    layout
-                    if self.debug_vis is not None
-                    else self.setup_parameter_layout()
-                )
-        else:
-            self.parent_layout = (
-                layout if self.debug_vis is not None else self.setup_parameter_layout()
-            )
-
-        self.setup_parameter_ui()  # fill parameter layout
-
         # time step in seconds
         self.time_step = self.config["DEFAULTS"]["time_step"]
-        self.skip_tick = False
 
         # arena
         self.arena = Arena(
@@ -117,7 +92,6 @@ class Behavior(QObject):
         # initialize robot
         self.behavior_robot = Robot(self.arena, self.config)
         self.behavior_robot.auto_move = True
-        self.behavior_robot_auto = True
         self.controlled = False
         self.trigger_next_robot_step = False
         self.flush_robot_target = False
@@ -126,6 +100,20 @@ class Behavior(QObject):
         self.reset_fish(self.config["DEFAULTS"]["number_of_fish"])
 
         self.initiate_numba()
+
+        # setup ui
+        if RT_MODE:
+            try:
+                self.parent_layout = wrapInstance(layout, QLayout)
+            except:
+                print(f"Behavior: Error with layout wrapping. Creating own one...")
+                self.parent_layout = (
+                    layout if self.debug_vis is not None else self.setup_parameter_layout()
+                )
+        else:
+            self.parent_layout = layout if self.debug_vis is not None else self.setup_parameter_layout()
+        
+        self.setup_parameter_ui() # fill parameter layout
 
         # step logger
         self._step_logger = []
@@ -182,7 +170,7 @@ class Behavior(QObject):
 
     def setup_parameter_ui(self):
         print("Behavior: Setting up parameter ui")
-        self.parameter_ui = Parameter_UI(self, RT_MODE)
+        self.parameter_ui = Parameter_UI(self, RT_MODE, self.config)
         #
         self.parent_layout.addLayout(self.parameter_ui)
 
@@ -234,8 +222,16 @@ class Behavior(QObject):
         zone_dir = {"zoa": val}
         self.change_zones(zone_dir)
 
+    def on_dark_mode_checkbox_changed(self):
+        if self.debug_vis:
+            self.debug_vis.toggle_dark_mode(
+                self.parameter_ui.dark_mode_checkbox.isChecked()
+            )
+            self.network_controller.update_ellipses.emit(self.behavior_robot, self.allfish)
+
+
+    # robot slots
     def on_auto_robot_checkbox_changed(self, val):
-        self.behavior_robot_auto = val
         self.behavior_robot.auto_move = val
         self.parameter_ui.next_robot_step.setEnabled(not val)
         self.parameter_ui.flush_robot_button.setEnabled(not val)
@@ -247,14 +243,28 @@ class Behavior(QObject):
     def on_flush_robot_target_clicked(self):
         self.flush_robot_target = True
 
-    def on_dark_mode_checkbox_changed(self):
-        if self.debug_vis:
-            self.debug_vis.toggle_dark_mode(
-                self.parameter_ui.dark_mode_checkbox.isChecked()
-            )
-            self.network_controller.update_ellipses.emit(
-                self.behavior_robot, self.allfish
-            )
+    def on_sel_target_pb_clicked(self):
+        target_x = self.util.map_px_to_cm(self.parameter_ui.target_x.value())
+        target_y = self.util.map_px_to_cm(self.parameter_ui.target_y.value())
+        self.target = target_x, target_y
+        if self.debug_vis is not None:
+            self.debug_vis.scene.addEllipse(self.util.map_cm_to_px(self.target[0]), self.util.map_cm_to_px(self.target[1]), 10, 10)
+        print(f"New target selected: {self.target[0]},{self.target[1]}")
+
+    def on_turn_right_pb_clicked(self):
+        self.turn_right = True
+
+    def on_turn_left_pb_clicked(self):
+        self.turn_left = True
+    
+    def on_turn_left_pb_released(self):
+        self.turn_left = False
+
+    def on_turn_right_pb_released(self):
+        self.turn_right = False
+
+    def on_sim_charge_pb_clicked(self):
+        self.go_to_charging_station = True
 
     def eventFilter(self, obj, event) -> bool:
         if event.type() == QEvent.KeyPress and obj is self.debug_vis.viz_window:
@@ -320,7 +330,7 @@ class Behavior(QObject):
         self.world = None
 
         # stop network threads
-        self.network_controller.close()
+        self.network_controller.exit()
 
     #
     # looping method
