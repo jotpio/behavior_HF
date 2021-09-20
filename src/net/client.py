@@ -16,7 +16,7 @@ class ServerListenerThread(QObject):
         self.socket = None
         self.server_address = (self.host, self.port)
         self.connected = False
-        self.debug = False
+        self.debug = self.config["DEBUG"]["console"]
         self.parent_behavior = parent
 
     def run_thread(self):
@@ -44,7 +44,7 @@ class ServerListenerThread(QObject):
 
     def connect_socket(self):
         try:
-            self.print("Trying to connect...")
+            if self.debug: self.print("Trying to connect...")
             if not self.connected and self.socket is None:
                 self.socket = socket(AF_INET, SOCK_STREAM)
                 self.socket.connect(self.server_address)
@@ -54,7 +54,7 @@ class ServerListenerThread(QObject):
             else:
                 raise Exception(f"{self.type.upper()}: Could not connect socket!")
         except Exception as e:
-            self.print("Error while attempting to connect!")
+            if self.debug: self.print("Error while attempting to connect!")
             time.sleep(1)  # Do nothing, just try again
             self.close_socket()
 

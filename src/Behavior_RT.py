@@ -140,7 +140,6 @@ class Behavior(PythonBehavior):
 
         self.turn_left = False
         self.turn_right = False
-        self.go_to_charging_station = False
 
         print("Behavior: Initialized!")
 
@@ -263,7 +262,7 @@ class Behavior(PythonBehavior):
         self.turn_right = False
 
     def on_sim_charge_pb_clicked(self):
-        self.go_to_charging_station = True
+        self.behavior_robot.go_to_charging_station = True
         
 #endregion
     
@@ -337,12 +336,12 @@ class Behavior(PythonBehavior):
                 RobotActionHalt(self.robot.uid, 0)
             ]
         else:
-            if self.go_to_charging_station:
+            if self.behavior_robot.go_to_charging_station:
 
                 # check if at right position in front of charger
                 pos = self.behavior_robot.pos
                 pos_y_difference = np.abs(pos[1] - self.config["CHARGER"]["position"][1])
-                if pos_y_difference < 100: 
+                if pos_y_difference < 50: 
                     right_posy = True
                 else: 
                     right_posy = False
@@ -357,36 +356,52 @@ class Behavior(PythonBehavior):
                             self.robot.uid, 0, (target[0], target[1])
                         ),
                     ]
+                print("Robot at right y pos")
 
                 #check rotation
                 rot = self.behavior_robot.ori
-                right_rot = np.abs(rot) < 5
+                right_rot = np.abs(rot) > 175
                 # rotate until correct orientation
                 if not right_rot:
                     return [
-                        RobotActionDirect(self.robot.uid, 0, -5.0, 5.0),
+                        RobotActionDirect(self.robot.uid, 0, 5.0, -5.0),
                     ]
+                print("Robot at right orientation")
 
-                # drive backwards into charger
-                pos_x_difference = np.abs(pos[0] - self.config["CHARGER"]["position"][0])
-                if pos_x_difference < 50: 
+                # drive forwards into charger
+                # check first if at charger position
+                pos_x_difference = pos[0] - self.config["CHARGER"]["position"][0] 
+                if pos_x_difference <= 0:
                     right_posx = True
                 else: 
                     right_posx = False
 
                 if not right_posx:
-                    charger_pos = self.config["CHARGER"]["position"]
-                    target = charger_pos[0], charger_pos[1]
-                    target = self.util.map_px_to_cm(target)
+                    # charger_pos = self.config["CHARGER"]["position"]
+                    # target = charger_pos[0], charger_pos[1]
+                    # target = self.util.map_px_to_cm(target)
+
+                    # drive slowly towards charger
                     return [
-                        RobotActionDirect(self.robot.uid, 0, -5.0, -5.0),
+                        RobotActionDirect(self.robot.uid, 0, 4.0, 4.0),
+                    ]
+                print("Robot at right x pos!")
+                # check if charging
+                if self.behavior_robot.charging:
+                    print("Charging!")
+                    self.behavior_robot.go_to_charging_station = False # arrived at charging station
+                    target = [
+                        RobotActionFlush(self.robot.uid),
+                        RobotActionHalt(self.robot.uid, 0)  #TODO: dont halt but drive slowly backwards maybe?
                     ]
 
-                #check if charging
+                else:
+                    #check if charging
+                    self.behavior_robot.check_if_charging()
+                    print("Not charging!")
+                    
 
 
-
-                self.go_to_charging_station = False
 
             if self.target is not None:
                 print(f"Set target to {self.target}")

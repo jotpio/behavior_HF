@@ -81,31 +81,6 @@ class Behavior(QObject):
         self.network_controller = NetworkController(self, self.config)
         self.network_controller.setup_networking()
 
-<<<<<<< HEAD
-=======
-        # # check debug_vis and RT_MODE conflict
-        # if RT_MODE:
-        #     assert self.debug_vis is None
-
-        # setup ui
-        if RT_MODE:
-            try:
-                self.parent_layout = wrapInstance(layout, QLayout)
-            except:
-                print(f"Behavior: Error with layout wrapping. Creating own one...")
-                self.parent_layout = (
-                    layout
-                    if self.debug_vis is not None
-                    else self.setup_parameter_layout()
-                )
-        else:
-            self.parent_layout = (
-                layout if self.debug_vis is not None else self.setup_parameter_layout()
-            )
-
-        self.setup_parameter_ui()  # fill parameter layout
-
->>>>>>> b0366d6a036c05a16144ee10b2f945aa3b6637f1
         # time step in seconds
         self.time_step = self.config["DEFAULTS"]["time_step"]
 
@@ -268,7 +243,6 @@ class Behavior(QObject):
     def on_flush_robot_target_clicked(self):
         self.flush_robot_target = True
 
-<<<<<<< HEAD
     def on_sel_target_pb_clicked(self):
         target_x = self.util.map_px_to_cm(self.parameter_ui.target_x.value())
         target_y = self.util.map_px_to_cm(self.parameter_ui.target_y.value())
@@ -291,16 +265,6 @@ class Behavior(QObject):
 
     def on_sim_charge_pb_clicked(self):
         self.go_to_charging_station = True
-=======
-    def on_dark_mode_checkbox_changed(self):
-        if self.debug_vis:
-            self.debug_vis.toggle_dark_mode(
-                self.parameter_ui.dark_mode_checkbox.isChecked()
-            )
-            self.network_controller.update_ellipses.emit(
-                self.behavior_robot, self.allfish
-            )
->>>>>>> b0366d6a036c05a16144ee10b2f945aa3b6637f1
 
     def eventFilter(self, obj, event) -> bool:
         if event.type() == QEvent.KeyPress and obj is self.debug_vis.viz_window:

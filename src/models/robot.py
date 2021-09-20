@@ -2,7 +2,8 @@ from src.models.agent import Agent, normalize
 import numpy as np
 import math
 import time
-
+from  datetime import datetime
+from collections import deque
 
 class Robot(Agent):
     def __init__(self, arena, config):
@@ -10,18 +11,23 @@ class Robot(Agent):
 
         self.controlled = config["ROBOT"]["controlled_from_start"]
         self.debug = False
-        self.battery = 100
+        self.voltage = 0
+        self.old_voltage = None
+        self.max_charging_time = self.config["ROBOT"]["charging_time"]
+        self.old_voltages_minute_queue = deque([0,0,0,0,0,0,0,0,0,0], self.max_charging_time) # one for each minute
         self.new_dir = np.asarray([0.1, 0])
         self.real_robot = None
         self.target_px = [0, 0]
         self.auto_move = False
-        self.reloading = False
+        self.charging = False
+        self.at_charging_port = False
+        self.go_to_charging_station = False
 
-        self.min_battery_charge = self.config["ROBOT"]["min_battery_charge"]
-        self.max_battery_charge = self.config["ROBOT"]["max_battery_charge"]
+        self.min_voltage = self.config["ROBOT"]["min_voltage"]
+        self.max_voltage = self.config["ROBOT"]["max_voltage"]
 
     def tick(self, fishpos, fishdir, dists):
-        if self.reloading:
+        if self.charging:
             return
 
         if self.debug or not self.auto_move:
@@ -30,7 +36,7 @@ class Robot(Agent):
             super().tick(fishpos, fishdir, dists)
 
     def move(self):
-        if self.reloading:
+        if self.charging:
             return
 
         if self.controlled:
@@ -64,30 +70,53 @@ class Robot(Agent):
         else:
             print(f"ROBOT: No Movement")
 
-    def reload(self):
-        print("ROBOT: Reloading...")
+    def set_voltage(self, voltage):
+        # first time voltage receive
+        if self.old_voltage is None:
+            self.old_voltage = voltage
+            self.last_minute_volt_msg_time = datetime.now()
+            self.old_voltages_minute_queue.append(voltage)
+        else:
+            self.old_voltage = self.voltage
 
-        # go to charging port
-        while not self.at_charging_port:
-            self.go_to_charging_port()
+        #update voltage
+        self.voltage = voltage
 
-        # charge if at charging port
-        if self.at_charging_port:
-            while self.battery < self.max_battery_charge:
-                print("ROBOT: Charging...")
-                time.sleep(1)
-            if self.battery >= self.max_battery_charge:
-                self.reloading = False
-                self.at_charging_port = False
+        #every minute add a voltage to the x min voltage list
+        curr_time = datetime.now()
+        time_delta = self.last_minute_volt_msg_time - curr_time
+        delta_mins = np.floor(time_delta.total_seconds()/60)
+        if delta_mins > 0:
+            self.old_voltages_minute_queue.append(self.voltage)
+            self.last_minute_volt_msg_time = curr_time
+        
+        #first check if charging
+        self.check_if_charging()
 
-    def set_battery_charge(self, percent):
-        self.battery = percent
+        #check if full by comparing voltage to voltage x minutes ago
+        #set charging to false then
+        self.check_if_full()
 
-        if self.battery < 50:
-            self.reload()
+        # if voltage too low start charging routine
+        if self.voltage < self.min_voltage and not self.charging:
+            self.go_to_charging_station = True
 
-    def go_to_charging_port():
-        pass  # TODO
+    def check_if_charging(self):
+        if self.voltage and self.old_voltage:
+            # check for voltage jump -> it may be charging
+            if self.voltage > self.old_voltage:
+                print("it may be charging")
+                self.charging = True
+                self.at_charging_port = True
+
+    def check_if_full(self):
+        #if voltage constant at max_voltage for x minutes
+        voltage_list = list(self.old_voltages_minute_queue)
+        
+        # check if voltage x minutes ago the same as current
+        if voltage_list[0] == self.voltage:
+            print("Robot is fully charged")
+            self.charging = False
 
     def set_robot(self, robot):
         self.real_robot = robot

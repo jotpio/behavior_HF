@@ -1,9 +1,8 @@
 DEBUG:
-  console: true
-  visualisation: false
+  console: false
+  visualisation: True
   optimisation: false
   optimisation_individual : false
-  debug_following : false
   
   #network dummies
   dummy_joystick_client: false
@@ -36,12 +35,13 @@ NETWORK:
   joystick_port: 13002
 
 CHARGER:
-  position: [400, 1600]
+  position: [170, 1815]
 
 ROBOT:
-  controlled_from_start: true
-  max_battery_charge: 90
-  min_battery_charge: 50 
+  controlled_from_start: false
+  max_voltage: 90
+  min_voltage: 50 
+  charging_time: 10 #in minutes
 
 ZONE_MODES:
   SMALL:
