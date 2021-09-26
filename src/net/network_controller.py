@@ -4,7 +4,8 @@ from PyQt5.QtCore import Qt, pyqtSignal, QObject
 from src.net.position_client import PositionClient
 from src.net.command_listener_server import CommandListenerServer
 from src.net.joystick_server import JoystickServer
-from src.net.dummy_joystick_client import DummyJoystickClient
+from src.net.charge_client import ChargeClient
+
 from src.models.robot import Robot
 
 
@@ -12,6 +13,7 @@ class NetworkController(QObject):
 
     update_positions = pyqtSignal(list, name="update_positions")
     update_ellipses = pyqtSignal(Robot, list, name="update_ellipses")
+    charge_command = pyqtSignal(dict, name="update_ellipses")
 
     def __init__(self, parent, config):
         super().__init__()
@@ -22,6 +24,7 @@ class NetworkController(QObject):
         self.pos_client = PositionClient(self.behavior, self.config)
         self.command_server = CommandListenerServer(self.behavior, self.config)
         self.joystick_server = JoystickServer(self.behavior, self.config)
+        self.charge_client = ChargeClient(self.behavior, self.config)
 
         # setup threads
         self.p_thread = threading.Thread(target=self.pos_client.run_thread)
@@ -36,16 +39,14 @@ class NetworkController(QObject):
         self.j_thread.daemon = True
         self.j_thread.start()
 
-        if self.config["DEBUG"]["dummy_joystick_client"]:
-            print("Network: running dummy joystick client")
-            self.dummy_joystick_client = DummyJoystickClient(self.config)
-            self.dj_thread = threading.Thread(
-                target=self.dummy_joystick_client.run_thread
-            )
-            self.dj_thread.daemon = True
-            self.dj_thread.start()
+        self.ch_thread = threading.Thread(target=self.charge_client.run_thread)
+        self.ch_thread.daemon = True
+        self.ch_thread.start()
 
         self.update_positions.connect(self.pos_client.send_pos, Qt.QueuedConnection)
+        self.charge_command.connect(
+            self.charge_client.send_command, Qt.QueuedConnection
+        )
 
         # p_thread.join()
         # c_thread.join()
@@ -55,3 +56,4 @@ class NetworkController(QObject):
         self.p_thread.join()
         self.c_thread.join()
         self.j_thread.join()
+        self.ch_thread.join()

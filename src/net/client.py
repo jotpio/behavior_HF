@@ -4,7 +4,7 @@ import json
 from PyQt5.QtCore import Qt, pyqtSignal, QObject
 
 
-class ServerListenerThread(QObject):
+class ClientSenderThread(QObject):
     def __init__(self, parent, type, config=None):
         super().__init__()
 
@@ -26,14 +26,21 @@ class ServerListenerThread(QObject):
             self.connect_socket()  # sets self.connected to True if successful
 
             # do stuff while connected
+            if self.connected:
+                self.print("Testing connection...")
             while self.connected:
                 try:
-                    self.print("Testing connection...")
                     data = self.socket.recv(8192).decode("utf-8")
                     # print(f"data {data}")
                     if data == "end connection":
                         self.print("Connection closed")
                         self.close_socket()
+                    if len(data) == 0:
+                        self.print("Empty data; closing socket!")
+                        self.close_socket()
+                        break
+                    if data == "received":
+                        continue
                 except:
                     self.print("Socket closed!")
                     self.close_socket()
@@ -44,7 +51,8 @@ class ServerListenerThread(QObject):
 
     def connect_socket(self):
         try:
-            if self.debug: self.print("Trying to connect...")
+            if self.debug:
+                self.print("Trying to connect...")
             if not self.connected and self.socket is None:
                 self.socket = socket(AF_INET, SOCK_STREAM)
                 self.socket.connect(self.server_address)
@@ -54,7 +62,8 @@ class ServerListenerThread(QObject):
             else:
                 raise Exception(f"{self.type.upper()}: Could not connect socket!")
         except Exception as e:
-            if self.debug: self.print("Error while attempting to connect!")
+            if self.debug:
+                self.print("Error while attempting to connect!")
             time.sleep(1)  # Do nothing, just try again
             self.close_socket()
 

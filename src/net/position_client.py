@@ -2,11 +2,10 @@ import time
 from socket import *
 import json
 from PyQt5.QtCore import Qt, pyqtSignal, QObject
-from src.net.client import ServerListenerThread
+from src.net.client import ClientSenderThread
 
 
-
-class PositionClient(ServerListenerThread):
+class PositionClient(ClientSenderThread):
     def __init__(self, parent, config=None):
         super().__init__(parent=parent, type="position", config=config)
 
@@ -18,5 +17,5 @@ class PositionClient(ServerListenerThread):
                 dump = json.dumps(pos).encode("utf-8")
                 self.socket.sendall(dump)
         except:
-            print("POSCLIENT: Socket error!")
+            self.print("Socket error!")
             self.close_socket()

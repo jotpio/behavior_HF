@@ -1,3 +1,10 @@
+import sys
+
+print(sys.version)
+print(sys.builtin_module_names)
+print(sys.executable)
+print(sys.path)
+
 import random
 
 from PyQt5.QtWidgets import QLayout, QVBoxLayout, QPushButton
@@ -10,6 +17,7 @@ try:
         RobotActionHalt,
         RobotActionToTarget,
     )
+
     print("RoboTracker found!")
 except:
     print("No RoboTracker found!")
@@ -31,7 +39,7 @@ class Behavior(PythonBehavior):
         self.robot = None
         self.world = None
         self.target = None
-    
+
     def on_random_target_clicked(self):
         self.target = random.randint(10, 55), random.randint(10, 55)
         print(f"New target selected: {self.target[0]},{self.target[1]}")
@@ -51,6 +59,9 @@ class Behavior(PythonBehavior):
 
     def next_speeds(self, robots, fish, timestep):
         robots = [r for r in robots if r.uid == self.robot.uid]
+
+        print(robots[0].voltage)
+        print(robots[0].chargingStatus)
         if not robots:
             print("No robot found!")
             return [
@@ -67,9 +78,7 @@ class Behavior(PythonBehavior):
                 self.target = None
                 return [
                     RobotActionFlush(self.robot.uid),
-                    RobotActionToTarget(
-                        self.robot.uid, 0, (target[0], target[1])
-                    ),
+                    RobotActionToTarget(self.robot.uid, 0, (target[0], target[1])),
                 ]
             else:
                 return []

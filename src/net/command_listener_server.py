@@ -7,15 +7,15 @@ import time
 
 from src.net.server import ServerListenerThread
 
+
 class CommandListenerServer(ServerListenerThread):
     send_command = pyqtSignal(list, name="send_command")
 
     def __init__(self, parent, config=None):
-        super().__init__(parent,"command", config=config)
+        super().__init__(parent, "command", config=config)
         self.send_command.connect(
             self.parent_behavior.queue_command, Qt.QueuedConnection
         )
-
 
     def run_thread(self):
         while True:
@@ -30,21 +30,33 @@ class CommandListenerServer(ServerListenerThread):
                     amount_received = 0
                     while amount_received < 4096:
                         data = self.conn.recv(4096).decode("utf-8")
-                        
+
                         if len(data) == 0:
                             self.print("Empty data; closing socket!")
+                            self.close_socket()
+                            break
+
+                        if data == "end connection":
                             self.close_socket()
                             break
 
                         try:
                             data = json.loads(data)
                         except:
-                            self.print("Error decoding message!")
+                            self.print(f"Error decoding message: {data}")
+                            break
                         amount_received += len(data)
-                        # print(f"JOYSERVER: Received {data}")
-
+                        self.print(f"Received {data}")
 
                         self.send_command.emit(data)
+
+                        # send received message to unity
+                        try:
+                            message = "received"
+                            self.conn.sendall(message.encode("utf-8"))
+                        except:
+                            self.print(f"Error sending 'received' message!")
+                            break
 
                 except:
                     self.print("Socket error!")

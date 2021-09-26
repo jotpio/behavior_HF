@@ -23,6 +23,8 @@ class Fish(Agent):
         super().__init__(id, pos, ori, arena, config, dir, zor, zoo, zoa, time_step)
 
         # self.alligned_with_robot = False
+        self.follow_angle = self.config["DEFAULTS"]["follow_angle"]
+        self.follow_angle_cos = np.cos(np.radians(self.follow_angle))
         self.following = False
         self.cos_max_turn_per_time_step = np.cos(
             np.radians(self.max_turn_rate * self.time_step * 10)
@@ -46,7 +48,7 @@ class Fish(Agent):
                 inner = np.inner(between_v, self.dir)
                 norms = np.linalg.norm(between_v) * np.linalg.norm(self.dir)
                 ori_diff2 = inner / norms
-                in_front = ori_diff2 > 0.17365152758
+                in_front = ori_diff2 > self.follow_angle_cos
 
                 if roughly_same_dir and in_front:
                     self.following = True

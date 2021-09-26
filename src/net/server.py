@@ -13,6 +13,7 @@ class ServerListenerThread(QObject):
         self.host = "127.0.0.1"
         self.port = config["NETWORK"][f"{type}_port"]
         self.socket = None
+        self.conn = None
         self.parent_behavior = parent
 
         self.debug = False
@@ -63,6 +64,7 @@ class ServerListenerThread(QObject):
             self.socket.close()
         self.socket = None
         self.connected = False
+        self.conn = None
 
     def start_server(self):
         try:

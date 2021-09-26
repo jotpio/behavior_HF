@@ -21,7 +21,14 @@ from src.ui.parameter_ui import Parameter_UI
 from src.models.arena import Arena
 from src.models.fish import Fish
 from src.models.robot import Robot
-from src.models.agent import attract, repulse, allign, check_in_radii_vision, normalize
+from src.models.agent import (
+    attract,
+    repulse,
+    allign,
+    check_in_radii_vision,
+    normalize,
+    get_zone_neighbours,
+)
 from src.util.util import Util
 
 from PyQt5.sip import wrapinstance as wrapInstance
@@ -108,12 +115,16 @@ class Behavior(QObject):
             except:
                 print(f"Behavior: Error with layout wrapping. Creating own one...")
                 self.parent_layout = (
-                    layout if self.debug_vis is not None else self.setup_parameter_layout()
+                    layout
+                    if self.debug_vis is not None
+                    else self.setup_parameter_layout()
                 )
         else:
-            self.parent_layout = layout if self.debug_vis is not None else self.setup_parameter_layout()
-        
-        self.setup_parameter_ui() # fill parameter layout
+            self.parent_layout = (
+                layout if self.debug_vis is not None else self.setup_parameter_layout()
+            )
+
+        self.setup_parameter_ui()  # fill parameter layout
 
         # step logger
         self._step_logger = []
@@ -146,6 +157,15 @@ class Behavior(QObject):
             np.asarray([0.0, 0.0]),
             np.asarray([0.0, 0.0]),
         )
+        get_zone_neighbours(
+            np.asarray([1.4, 2.0, 43.0321, 4214.3123]),
+            np.zeros((5, 2)),
+            np.zeros((5, 2)),
+            10,
+            50,
+            150,
+        )
+        normalize(np.asarray([1.4, 2.0]))
 
     def setup_parameter_layout(self):
         print("Behavior: Setting up parameter layout")
@@ -227,8 +247,9 @@ class Behavior(QObject):
             self.debug_vis.toggle_dark_mode(
                 self.parameter_ui.dark_mode_checkbox.isChecked()
             )
-            self.network_controller.update_ellipses.emit(self.behavior_robot, self.allfish)
-
+            self.network_controller.update_ellipses.emit(
+                self.behavior_robot, self.allfish
+            )
 
     # robot slots
     def on_auto_robot_checkbox_changed(self, val):
@@ -248,7 +269,12 @@ class Behavior(QObject):
         target_y = self.util.map_px_to_cm(self.parameter_ui.target_y.value())
         self.target = target_x, target_y
         if self.debug_vis is not None:
-            self.debug_vis.scene.addEllipse(self.util.map_cm_to_px(self.target[0]), self.util.map_cm_to_px(self.target[1]), 10, 10)
+            self.debug_vis.scene.addEllipse(
+                self.util.map_cm_to_px(self.target[0]),
+                self.util.map_cm_to_px(self.target[1]),
+                10,
+                10,
+            )
         print(f"New target selected: {self.target[0]},{self.target[1]}")
 
     def on_turn_right_pb_clicked(self):
@@ -256,7 +282,7 @@ class Behavior(QObject):
 
     def on_turn_left_pb_clicked(self):
         self.turn_left = True
-    
+
     def on_turn_left_pb_released(self):
         self.turn_left = False
 
@@ -337,6 +363,11 @@ class Behavior(QObject):
     #
     def next_speeds(self, robots, fish, timestep):
 
+        if self.config["DEBUG"]["debug_charging"]:
+            self.network_controller.charge_command.emit(
+                {"command": "robot charging", "args": [0]}
+            )
+
         # Move fish (simulate)
         if self.optimisation:
             start_time = time.time()
@@ -352,19 +383,6 @@ class Behavior(QObject):
                 func(*args)
             except:
                 print(f"Command not found or error in command execution! {command}")
-
-        # # wasd robo movement
-        # if self.behavior_robot.debug and self.behavior_robot.controlled:
-        #     robomove1 = np.unique(np.asarray(self.movelist), axis=0)
-        #     robomove2 = np.sum(robomove1, axis=0)
-        #     robomove3 = (
-        #         robomove2 / np.linalg.norm(robomove2)
-        #         if np.linalg.norm(robomove2) != 0
-        #         else self.behavior_robot.dir
-        #     )
-        #     self.behavior_robot.new_dir = robomove3
-        #     # print(robomove1, robomove2, robomove3)
-        # self.movelist = []
 
         # TICK - update all fish one time step forward (tick)
         all_agents = [self.behavior_robot]
@@ -522,6 +540,11 @@ class Behavior(QObject):
             self.zor = self.config["ZONE_MODES"]["LARGE"]["zor"]
             self.zoo = self.config["ZONE_MODES"]["LARGE"]["zoo"]
             self.zoa = self.config["ZONE_MODES"]["LARGE"]["zoa"]
+
+        if size == 2:
+            self.zor = self.config["ZONE_MODES"]["CHALL"]["zor"]
+            self.zoo = self.config["ZONE_MODES"]["CHALL"]["zoo"]
+            self.zoa = self.config["ZONE_MODES"]["CHALL"]["zoa"]
 
         for f in self.allfish:
             f.change_zones(self.zor, self.zoo, self.zoa)

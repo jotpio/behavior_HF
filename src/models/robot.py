@@ -2,8 +2,9 @@ from src.models.agent import Agent, normalize
 import numpy as np
 import math
 import time
-from  datetime import datetime
+from datetime import datetime
 from collections import deque
+
 
 class Robot(Agent):
     def __init__(self, arena, config):
@@ -11,23 +12,26 @@ class Robot(Agent):
 
         self.controlled = config["ROBOT"]["controlled_from_start"]
         self.debug = False
-        self.voltage = 0
+        self.voltage = 0.0
         self.old_voltage = None
         self.max_charging_time = self.config["ROBOT"]["charging_time"]
-        self.old_voltages_minute_queue = deque([0,0,0,0,0,0,0,0,0,0], self.max_charging_time) # one for each minute
+        self.old_voltages_minute_queue = deque(
+            [], self.max_charging_time
+        )  # one for each minute
+        self.old_voltages_second_queue = deque([], 60)  # one for each second
         self.new_dir = np.asarray([0.1, 0])
         self.real_robot = None
         self.target_px = [0, 0]
         self.auto_move = False
         self.charging = False
-        self.at_charging_port = False
         self.go_to_charging_station = False
+        self.fullCharge = False
 
         self.min_voltage = self.config["ROBOT"]["min_voltage"]
         self.max_voltage = self.config["ROBOT"]["max_voltage"]
 
     def tick(self, fishpos, fishdir, dists):
-        if self.charging:
+        if self.charging or self.go_to_charging_station:
             return
 
         if self.debug or not self.auto_move:
@@ -36,7 +40,7 @@ class Robot(Agent):
             super().tick(fishpos, fishdir, dists)
 
     def move(self):
-        if self.charging:
+        if self.charging or self.go_to_charging_station:
             return
 
         if self.controlled:
@@ -71,52 +75,87 @@ class Robot(Agent):
             print(f"ROBOT: No Movement")
 
     def set_voltage(self, voltage):
-        # first time voltage receive
-        if self.old_voltage is None:
-            self.old_voltage = voltage
-            self.last_minute_volt_msg_time = datetime.now()
-            self.old_voltages_minute_queue.append(voltage)
-        else:
-            self.old_voltage = self.voltage
+        try:
 
-        #update voltage
-        self.voltage = voltage
+            if voltage > 0:
 
-        #every minute add a voltage to the x min voltage list
-        curr_time = datetime.now()
-        time_delta = self.last_minute_volt_msg_time - curr_time
-        delta_mins = np.floor(time_delta.total_seconds()/60)
-        if delta_mins > 0:
-            self.old_voltages_minute_queue.append(self.voltage)
-            self.last_minute_volt_msg_time = curr_time
-        
-        #first check if charging
-        self.check_if_charging()
+                # first time voltage receive
+                if self.old_voltage is None:
+                    self.old_voltage = voltage
+                    self.last_minute_volt_msg_time = datetime.now()
+                    self.last_second_volt_msg_time = self.last_minute_volt_msg_time
+                    self.old_voltages_minute_queue.append(voltage)
+                    self.old_voltages_second_queue.append(voltage)
+                else:
+                    self.old_voltage = self.voltage
 
-        #check if full by comparing voltage to voltage x minutes ago
-        #set charging to false then
-        self.check_if_full()
+                # update voltage
+                self.voltage = voltage
 
-        # if voltage too low start charging routine
-        if self.voltage < self.min_voltage and not self.charging:
-            self.go_to_charging_station = True
+                # every minute add a voltage to the x min voltage list
+                curr_time = datetime.now()
+                time_delta = curr_time - self.last_minute_volt_msg_time
+                # print(time_delta.total_seconds())
+                delta_mins = np.floor(time_delta.total_seconds() / 60)
+                # print(delta_mins)
+                if delta_mins > 0:
+                    self.old_voltages_minute_queue.append(self.voltage)
+                    self.last_minute_volt_msg_time = curr_time
 
-    def check_if_charging(self):
-        if self.voltage and self.old_voltage:
-            # check for voltage jump -> it may be charging
-            if self.voltage > self.old_voltage:
-                print("it may be charging")
-                self.charging = True
-                self.at_charging_port = True
+                # save voltage each second
+                time_delta2 = curr_time - self.last_second_volt_msg_time
+                delta_secs = np.floor(time_delta2.total_seconds())
+                if delta_secs > 0:
+
+                    self.old_voltages_second_queue.append(self.voltage)
+                    self.last_second_volt_msg_time = curr_time
+
+                # check if full by comparing voltage to voltage x minutes ago
+                # set charging to false then
+                self.check_if_full()
+
+                # if voltage too low start charging routine in behavior
+                self.check_if_low_charge()
+        except:
+            print("ROBOT: Error in set_voltage!")
+
+    def set_charging(self, is_charging):
+        self.charging = is_charging
+
+        if self.charging:
+            self.go_to_charging_station = (
+                False  # arrived at charging station and is charging
+            )
 
     def check_if_full(self):
-        #if voltage constant at max_voltage for x minutes
-        voltage_list = list(self.old_voltages_minute_queue)
-        
-        # check if voltage x minutes ago the same as current
-        if voltage_list[0] == self.voltage:
+        # if voltage constant for x minutes
+        voltage_list_min = list(self.old_voltages_minute_queue)
+        voltage_list_sec = list(self.old_voltages_second_queue)
+
+        print(f"ROBOT minute voltage list: {voltage_list_min}")
+        # print(f"ROBOT second voltage list: {voltage_list_sec}")
+
+        # check if voltage x minutes ago the same as current or voltage larger than 8.1
+        if voltage_list_min[0] == self.voltage or self.voltage > 8.1:
             print("Robot is fully charged")
-            self.charging = False
+            self.fullCharge = True
+
+        # also check if mean gradient of voltage list is close to 0
+        gradient = (
+            np.gradient(voltage_list_min) if len(voltage_list_min) > 1 else 10
+        )  # if not enough values: arbitrary high gradient value
+        mean_grad = np.mean(gradient)
+        mean_voltage = np.mean(voltage_list_min)
+        if math.isclose(mean_grad, 0, rel_tol=0.2) and mean_voltage > 8:
+            print("Robot is fully charged (gradient)")
+        else:
+            pass
+            # print(f"Robot is NOT fully charged (gradient): {gradient}")
+
+    def check_if_low_charge(self):
+        if self.voltage < self.min_voltage and not self.charging:
+            print("ROBOT: LOW CHARGE")
+            self.go_to_charging_station = True
 
     def set_robot(self, robot):
         self.real_robot = robot

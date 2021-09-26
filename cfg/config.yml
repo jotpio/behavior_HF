@@ -1,18 +1,20 @@
 DEBUG:
   console: false
-  visualisation: True
+  visualisation: false
   optimisation: false
   optimisation_individual : false
+  debug_charging: false
   
   #network dummies
-  dummy_joystick_client: false
+  #dummy_joystick_client: false
 
 DEFAULTS:
-  number_of_fish: 0
+  number_of_fish: 1
   zoa: 200
   zoo: 80
   zor: 10
   vision_angle: 300
+  follow_angle: 90
 
   error_deg: 10
   max_speed: 10
@@ -33,14 +35,15 @@ NETWORK:
   position_port: 13000
   command_port: 13001
   joystick_port: 13002
+  charge_port: 13006
 
 CHARGER:
-  position: [170, 1815]
+  position: [-18, 1800]
 
 ROBOT:
-  controlled_from_start: false
-  max_voltage: 90
-  min_voltage: 50 
+  controlled_from_start: true
+  max_voltage: 8.4
+  min_voltage: 7.5
   charging_time: 10 #in minutes
 
 ZONE_MODES:
@@ -52,3 +55,7 @@ ZONE_MODES:
     zor: 40
     zoo: 60
     zoa: 100
+  CHALL:
+    zor: 40
+    zoo: 100
+    zoa: 220
