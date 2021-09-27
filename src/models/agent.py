@@ -315,7 +315,6 @@ class Agent:
             self.zoa = zoa
 
 
-@jit(nopython=True)
 def check_in_vision(half_vision_cos, dir_norm, pos, point):
     between_v = np.asarray(point) - pos
     between_v_norm = between_v / np.linalg.norm(between_v.astype(np.float64))
@@ -341,7 +340,6 @@ def check_in_vision(half_vision_cos, dir_norm, pos, point):
     return True
 
 
-@jit(nopython=True)
 def check_in_radii_vision(p_zor, d_zoo, p_zoa, half_vision_cos, dir_norm, pos):
     points_zor = []
     for p in p_zor:
@@ -365,7 +363,6 @@ def check_in_radii_vision(p_zor, d_zoo, p_zoa, half_vision_cos, dir_norm, pos):
     return points_zor, dirs_zoo, points_zoa
 
 
-@jit(nopython=True)
 def get_zone_neighbours(dists, fishpos, fishdir, zor, zoo, zoa):
     zor_iarr = (dists != 0) & (dists <= zor)
     zoo_iarr = (dists > zor) & (dists <= zoo)
@@ -379,7 +376,6 @@ def get_zone_neighbours(dists, fishpos, fishdir, zor, zoo, zoa):
         influenced_by_robot = True
     else:
         influenced_by_robot = False
-
     points_zor = fishpos[zor_iarr]  # fish and arena points in zor
     dirs_zoo = fishdir[zoo_iarr]  # fish in zoo
     points_zoa = fishpos[zoa_iarr]  # fish in zoa
@@ -387,7 +383,6 @@ def get_zone_neighbours(dists, fishpos, fishdir, zor, zoo, zoa):
     return points_zor, dirs_zoo, points_zoa, influenced_by_robot
 
 
-@jit(nopython=True)
 def repulse(points_zor, pos):
     sum = np.asarray([0.0, 0.0])
     for f in points_zor:
@@ -402,7 +397,6 @@ def repulse(points_zor, pos):
     return dir_r
 
 
-@jit(nopython=True)
 def align(dirs_zoo):
     # dir_o = np.asarray([0.0, 0.0])
     # for dir in dirs_zoo:
@@ -412,7 +406,6 @@ def align(dirs_zoo):
     return np.sum(unit_dirs_zoo, axis=0)
 
 
-@jit(nopython=True)
 def attract(points_zoa, pos):
     dirs_tw_neighbors = (
         points_zoa - pos
@@ -425,7 +418,6 @@ def attract(points_zoa, pos):
     #     dir_a = dir_a + ((np.asarray(f) - pos) / np.linalg.norm(np.asarray(f) - pos))
 
 
-@jit(nopython=True)
 def normalize(v):
     """
     Normalize vectors or arrays of vectors (matrices)

@@ -173,7 +173,7 @@ class Behavior(QObject):
             np.asarray([0.0, 0.0]),
         )
         get_zone_neighbours(
-            np.asarray([1.4, 2.0, 43.0321, 4214.3123]),
+            np.asarray([1.4, 2.0, 43.0321, 4214.3123, 2.5]),
             np.zeros((5, 2)),
             np.zeros((5, 2)),
             10,
