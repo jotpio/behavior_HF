@@ -24,7 +24,7 @@ from src.models.robot import Robot
 from src.models.agent import (
     attract,
     repulse,
-    allign,
+    align,
     check_in_radii_vision,
     normalize,
     get_zone_neighbours,
@@ -98,8 +98,7 @@ class Behavior(QObject):
 
         # initialize robot
         self.behavior_robot = Robot(self.arena, self.config)
-        self.behavior_robot.auto_move = True
-        self.controlled = False
+        # self.controlled = False
         self.trigger_next_robot_step = False
         self.flush_robot_target = False
 
@@ -147,7 +146,7 @@ class Behavior(QObject):
 
     def initiate_numba(self):
         repulse(np.asarray([[0.0, 0.0]]), np.asarray([0, 0]))
-        allign(np.asarray([[0.0, 0.0]]))
+        align(np.asarray([[0.0, 0.0]]))
         attract(np.asarray([[0.0, 0.0]]), np.asarray([0, 0]))
         check_in_radii_vision(
             np.asarray([[0.0, 0.0]]),
@@ -253,7 +252,7 @@ class Behavior(QObject):
 
     # robot slots
     def on_auto_robot_checkbox_changed(self, val):
-        self.behavior_robot.auto_move = val
+        self.behavior_robot.controlled = not val
         self.parameter_ui.next_robot_step.setEnabled(not val)
         self.parameter_ui.flush_robot_button.setEnabled(not val)
 

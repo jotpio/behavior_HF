@@ -45,6 +45,7 @@ ROBOT:
   max_voltage: 8.4
   min_voltage: 7.5
   charging_time: 10 #in minutes
+  arena_repulsion: 300
 
 ZONE_MODES:
   SMALL:

@@ -22,7 +22,7 @@ class Fish(Agent):
     ):
         super().__init__(id, pos, ori, arena, config, dir, zor, zoo, zoa, time_step)
 
-        # self.alligned_with_robot = False
+        # self.aligned_with_robot = False
         self.follow_angle = self.config["DEFAULTS"]["follow_angle"]
         self.follow_angle_cos = np.cos(np.radians(self.follow_angle))
         self.following = False
