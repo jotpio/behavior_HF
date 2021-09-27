@@ -170,11 +170,12 @@ class Behavior(PythonBehavior):
         print("Behavior: Initialized!")
 
     def heartbeat(self):
-        heartbeat_path = "/home/hf-robofish/RTlog.txt"
-        if not os.path.isfile(heartbeat_path):
-            os.mknod(heartbeat_path)
-        else:
-            print("heartbeat still exists")
+        try:
+            heartbeat_path = "/home/hf-robofish/RTlog.txt"
+            if not os.path.isfile(heartbeat_path):
+                os.mknod(heartbeat_path)
+        except:
+            print("BEHAVIOR: Error in heartbeat!")
 
     def initiate_numba(self):
         repulse(np.asarray([[0.0, 0.0]]), np.asarray([0, 0]))
