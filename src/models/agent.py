@@ -59,177 +59,205 @@ class Agent:
         self.half_vision_cos = np.cos(np.radians(self.vision_angle / 2))
 
     def tick(self, fishpos, fishdir, dists):
-        #
-        # preparations
-        #
-        if self.optimisation_individual:
-            time_start = time.perf_counter()
-        pos = np.asarray(self.pos)
-        old_rotation = self.ori
-        arena_repulsion = self.config["ARENA"]["repulsion"]
+        try:
+            #
+            # preparations
+            #
+            if self.optimisation_individual:
+                time_start = time.perf_counter()
+            pos = np.asarray(self.pos)
+            old_rotation = self.ori
+            arena_repulsion = self.config["ARENA"]["repulsion"]
 
-        theta = math.radians(old_rotation)
-        self.dir = np.asarray([math.cos(theta), math.sin(theta)]) / np.linalg.norm(
-            [math.cos(theta), math.sin(theta)]
-        )
-        dirt1 = self.dir
-        if self.optimisation_individual:
-            t1 = time.perf_counter()
-            print(f"time before zone check: {t1 - time_start}", flush=True)
-
-        #
-        # get zone neighbors
-        #
-
-        # use corresponding precalculated distmatrix row
-        (
-            points_zor,
-            dirs_zoo,
-            points_zoa,
-            self.influenced_by_robot,
-        ) = get_zone_neighbours(dists, fishpos, fishdir, self.zor, self.zoo, self.zoa)
-        points_zor = points_zor.tolist()
-
-        if self.optimisation_individual:
-            t2 = time.perf_counter()
-            print(f"time for zone check: {t2 - t1}", flush=True)
-
-        # check if near arena borders and repulse from nearest border point
-        self.arena_points = self.arena.getNearestArenaPoints(pos)
-
-        for point in self.arena_points:  # arena points
-            if point[1] < arena_repulsion:
-                points_zor.append(point[0])
-                # print(f"repulse from {point[0]}")
-        points_zor = np.asarray(points_zor)
-        if self.optimisation_individual:
-            t3 = time.perf_counter()
-            print(f"time for arena check: {t3 - t2}", flush=True)
-
-        #
-        # for each point in radii check if in vision
-        #
-        points_zor, dirs_zoo, points_zoa = check_in_radii_vision(
-            points_zor,
-            dirs_zoo,
-            points_zoa,
-            self.half_vision_cos,
-            self.dir_norm,
-            np.asarray(self.pos),
-        )
-        if self.optimisation_individual:
-            t4 = time.perf_counter()
-            print(f"time for vision check: {t4 - t3}", flush=True)
-
-        #
-        # zone calculations
-        #
-
-        # zone of repulsion (zor)
-        n_zor = len(points_zor)
-        if n_zor > 0:
-            # repulse
-            dirt1 = repulse(np.asarray(points_zor), pos)
-            self.repulsed = True
-            # print("repulse")
-        # if no fish or wall in zone of repulsion
-        else:
-            # print("no repulse")
-            n_zoo = len(dirs_zoo)
-            n_zoa = len(points_zoa)
-
-            self.repulsed = False
-
-            dir_o = np.asarray([0, 0])
-            if n_zoo > 0:
-                # allign
-                dir_o = allign(np.asarray(dirs_zoo))
-
-            dir_a = np.asarray([0, 0])
-            if n_zoa > 0:
-                # attract
-                dir_a = attract(np.asarray(points_zoa), pos)
-
-            # combine calculated directions
-            if n_zoa == 0 and n_zoo > 0:
-                dirt1 = dir_o
-            elif n_zoo == 0 and n_zoa > 0:
-                dirt1 = dir_a
-            elif n_zoo > 0 and n_zoa > 0:
-                dirt1 = np.mean([dir_a, dir_o], axis=0)
-
-        if self.optimisation_individual:
-            t5 = time.perf_counter()
-            print(f"time for zone apply: {t5 - t4}", flush=True)
-
-        #
-        # add random noise rotation to new direction vector
-        #
-        noise = math.radians(random.gauss(0, self.error_deg))
-        # print(noise)
-        rand_rot_matrix = np.array(
-            [[np.cos(noise), -np.sin(noise)], [np.sin(noise), np.cos(noise)]]
-        )
-        dirt1 = np.dot(rand_rot_matrix, dirt1)
-
-        #
-        # consider max turning rate theta
-        #
-        len_dir = np.linalg.norm(self.dir)
-        len_dirt1 = np.linalg.norm(dirt1)
-        unit_vector_1 = (self.dir / len_dir) if len_dir != 0 else np.asarray([0.0, 0.0])
-        unit_vector_2 = (
-            (dirt1 / len_dirt1) if len_dirt1 != 0 else np.asarray([0.0, 0.0])
-        )
-        dot_product = np.dot(unit_vector_1, unit_vector_2)
-
-        det = np.linalg.det([unit_vector_1, unit_vector_2])
-        deg_angle2 = np.degrees(math.atan2(det, dot_product))
-
-        curr_turn_angle = deg_angle2
-        #
-        # clip direction to move only by max turn rate
-        #
-        if np.abs(curr_turn_angle) > self.max_turn_rate * self.time_step:
-
-            clipped_turn_angle = np.radians(
-                np.sign(curr_turn_angle) * self.max_turn_rate * self.time_step
+            theta = math.radians(old_rotation)
+            self.dir = np.asarray([math.cos(theta), math.sin(theta)]) / np.linalg.norm(
+                [math.cos(theta), math.sin(theta)]
             )
-            clipped_rot_matrix = np.array(
-                [
-                    [np.cos(clipped_turn_angle), -np.sin(clipped_turn_angle)],
-                    [np.sin(clipped_turn_angle), np.cos(clipped_turn_angle)],
-                ]
-            )
-            dirt1 = np.dot(
-                clipped_rot_matrix, self.dir
-            )  # rotate only by clipped rotation angle toward new direction
+            dirt1 = self.dir
+            if self.optimisation_individual:
+                t1 = time.perf_counter()
+                print(f"time before zone check: {t1 - time_start}", flush=True)
 
-        # if dirt1 in not null it is new dir
-        if len_dirt1:
-            self.new_dir = normalize(np.asarray(dirt1))
-        else:
-            self.new_dir = self.dir
+            #
+            # get zone neighbors
+            #
+            try:
+                # use corresponding precalculated distmatrix row
+                (
+                    points_zor,
+                    dirs_zoo,
+                    points_zoa,
+                    self.influenced_by_robot,
+                ) = get_zone_neighbours(dists, fishpos, fishdir, self.zor, self.zoo, self.zoa)
+                points_zor = points_zor.tolist()
 
-        if self.optimisation_individual:
-            t6 = time.perf_counter()
-            print(f"time for turn check and random noise: {t6 - t5} \n", flush=True)
-        if self.optimisation_individual:
-            t7 = time.perf_counter()
-            print(f"time for fish tick: {t7 - time_start} \n", flush=True)
+                if self.optimisation_individual:
+                    t2 = time.perf_counter()
+                    print(f"time for zone check: {t2 - t1}", flush=True)
+            except:
+                print(f"\nAGENT: Error in zone neighbor check - id {self.id}")
+
+            try:
+                # check if near arena borders and repulse from nearest border point
+                self.arena_points = self.arena.getNearestArenaPoints(pos)
+
+                for point in self.arena_points:  # arena points
+                    if point[1] < arena_repulsion:
+                        points_zor.append(point[0])
+                        # print(f"repulse from {point[0]}")
+                points_zor = np.asarray(points_zor)
+                if self.optimisation_individual:
+                    t3 = time.perf_counter()
+                    print(f"time for arena check: {t3 - t2}", flush=True)
+            except:
+                print(f"\nAGENT: Error in arena point check - id {self.id}")
+            #
+            # for each point in radii check if in vision
+            #
+            try:
+                points_zor, dirs_zoo, points_zoa = check_in_radii_vision(
+                    points_zor,
+                    dirs_zoo,
+                    points_zoa,
+                    self.half_vision_cos,
+                    self.dir_norm,
+                    np.asarray(self.pos),
+                )
+                if self.optimisation_individual:
+                    t4 = time.perf_counter()
+                    print(f"time for vision check: {t4 - t3}", flush=True)
+            except:
+                print(f"\nAGENT: Error in radii check - id {self.id}")
+
+            #
+            # zone calculations
+            #
+
+            # zone of repulsion (zor)
+            n_zor = len(points_zor)
+            if n_zor > 0:
+                try:
+                    # repulse
+                    dirt1 = repulse(np.asarray(points_zor), pos)
+                    self.repulsed = True
+                except:
+                    print(f"\nAGENT: Error in repulsion - id {self.id}")
+                # print("repulse")
+            # if no fish or wall in zone of repulsion
+            else:
+                # print("no repulse")
+                n_zoo = len(dirs_zoo)
+                n_zoa = len(points_zoa)
+
+                self.repulsed = False
+
+                dir_o = np.asarray([0, 0])
+                if n_zoo > 0:
+                    try:
+                        # align
+                        dir_o = align(np.asarray(dirs_zoo))
+                    except:
+                        print(f"\nAGENT: Error in align - id {self.id}")
+
+                dir_a = np.asarray([0, 0])
+                if n_zoa > 0:
+                    try:
+                        # attract
+                        dir_a = attract(np.asarray(points_zoa), pos)
+                    except:
+                        print(f"\nAGENT: Error in attract - id {self.id}")
+                    
+
+                # combine calculated directions
+                if n_zoa == 0 and n_zoo > 0:
+                    dirt1 = dir_o
+                elif n_zoo == 0 and n_zoa > 0:
+                    dirt1 = dir_a
+                elif n_zoo > 0 and n_zoa > 0:
+                    dirt1 = np.mean([dir_a, dir_o], axis=0)
+
+            if self.optimisation_individual:
+                t5 = time.perf_counter()
+                print(f"time for zone apply: {t5 - t4}", flush=True)
+
+            #
+            # add random noise rotation to new direction vector
+            #
+            try:
+                noise = math.radians(random.gauss(0, self.error_deg))
+                # print(noise)
+                rand_rot_matrix = np.array(
+                    [[np.cos(noise), -np.sin(noise)], [np.sin(noise), np.cos(noise)]]
+                )
+                dirt1 = np.dot(rand_rot_matrix, dirt1)
+            except:
+                print(f"\nAGENT: Error in rotation noise - id {self.id}")
+
+            #
+            # consider max turning rate theta
+            #
+            try:
+                len_dir = np.linalg.norm(self.dir)
+                len_dirt1 = np.linalg.norm(dirt1)
+                unit_vector_1 = (self.dir / len_dir) if len_dir != 0 else np.asarray([0.0, 0.0])
+                unit_vector_2 = (
+                    (dirt1 / len_dirt1) if len_dirt1 != 0 else np.asarray([0.0, 0.0])
+                )
+                dot_product = np.dot(unit_vector_1, unit_vector_2)
+
+                det = np.linalg.det([unit_vector_1, unit_vector_2])
+                deg_angle2 = np.degrees(math.atan2(det, dot_product))
+
+                curr_turn_angle = deg_angle2
+                #
+                # clip direction to move only by max turn rate
+                #
+                if np.abs(curr_turn_angle) > self.max_turn_rate * self.time_step:
+
+                    clipped_turn_angle = np.radians(
+                        np.sign(curr_turn_angle) * self.max_turn_rate * self.time_step
+                    )
+                    clipped_rot_matrix = np.array(
+                        [
+                            [np.cos(clipped_turn_angle), -np.sin(clipped_turn_angle)],
+                            [np.sin(clipped_turn_angle), np.cos(clipped_turn_angle)],
+                        ]
+                    )
+                    dirt1 = np.dot(
+                        clipped_rot_matrix, self.dir
+                    )  # rotate only by clipped rotation angle toward new direction
+            except:
+                print(f"\nAGENT: Error in rotation clipping - id {self.id}")
+            # if dirt1 in not null it is new dir
+            if len_dirt1:
+                self.new_dir = normalize(np.asarray(dirt1))
+            else:
+                self.new_dir = self.dir
+
+            if self.optimisation_individual:
+                t6 = time.perf_counter()
+                print(f"time for turn check and random noise: {t6 - t5} \n", flush=True)
+            if self.optimisation_individual:
+                t7 = time.perf_counter()
+                print(f"time for fish tick: {t7 - time_start} \n", flush=True)
+        except:
+            print(f"\nAGENT: Error in tick - id {self.id}")
 
     def move(self):
-        # new position is old position plus new direction vector times speed
-        new_pos = self.pos + (self.new_dir * self.max_speed)
-        # check if next position would be outside arena and update new_dir if its not
-        inside = self.check_inside_arena(new_pos)
-        if not inside:
+        try:
+            # new position is old position plus new direction vector times speed
             new_pos = self.pos + (self.new_dir * self.max_speed)
-        self.pos = np.array(new_pos, dtype=np.float64)
-        self.dir = self.new_dir
-        self.dir_norm = normalize(self.dir)
-        # new orientation is orientation of new direction vector
-        self.ori = math.degrees(math.atan2(self.dir[1], self.dir[0]))
+            # check if next position would be outside arena and update new_dir if its not
+            inside = self.check_inside_arena(new_pos)
+            if not inside:
+                new_pos = self.pos + (self.new_dir * self.max_speed)
+            self.pos = np.array(new_pos, dtype=np.float64)
+            self.dir = self.new_dir
+            self.dir_norm = normalize(self.dir)
+            # new orientation is orientation of new direction vector
+            self.ori = math.degrees(math.atan2(self.dir[1], self.dir[0]))
+        except:
+            print(f"\nAGENT: Error in move - id {self.id}")
 
         # print(pos, self.pos)
 
@@ -371,7 +399,7 @@ def repulse(points_zor, pos):
 
 
 @jit(nopython=True)
-def allign(dirs_zoo):
+def align(dirs_zoo):
     # dir_o = np.asarray([0.0, 0.0])
     # for dir in dirs_zoo:
     #     dir_o = dir_o + (np.asarray(dir) / np.linalg.norm(np.asarray(dir)))
@@ -399,9 +427,15 @@ def normalize(v):
     Normalize vectors or arrays of vectors (matrices)
     
     input vector must be a ndarray!
+    vector magnitude cannot be 0!
     from: https://stackoverflow.com/questions/2850743/numpy-how-to-quickly-normalize-many-vectors
     """
     magnitudes = np.sqrt((v ** 2).sum(-1))
     if v.ndim > 1:
         magnitudes = np.expand_dims(magnitudes, 1)
-    return v / magnitudes
+    #check if magnitudes nan or 0
+    if np.any(np.isnan(magnitudes)) or magnitudes == 0:
+        out = v
+    else:
+        out = v / magnitudes
+    return out

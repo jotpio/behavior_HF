@@ -22,57 +22,83 @@ class Robot(Agent):
         self.new_dir = np.asarray([0.1, 0])
         self.real_robot = None
         self.target_px = [0, 0]
-        self.auto_move = False
         self.charging = False
         self.go_to_charging_station = False
         self.fullCharge = False
+        self.arena_repulsion = self.config["ROBOT"]["arena_repulsion"]
 
         self.min_voltage = self.config["ROBOT"]["min_voltage"]
         self.max_voltage = self.config["ROBOT"]["max_voltage"]
 
     def tick(self, fishpos, fishdir, dists):
-        if self.charging or self.go_to_charging_station:
-            return
-
-        if self.debug or not self.auto_move:
-            return
-        if not self.controlled:
-            super().tick(fishpos, fishdir, dists)
+        try:
+            # dont tick if in charging state
+            if self.charging or self.go_to_charging_station:
+                return
+            # tick only if not controlled
+            if not self.controlled:
+                super().tick(fishpos, fishdir, dists)
+        except:
+            print(f"\nROBOT: Error in tick")
 
     def move(self):
-        if self.charging or self.go_to_charging_station:
-            return
+        try:
+            # don't move elsewhere if charging or going to charging station
+            if self.charging or self.go_to_charging_station:
+                return
 
-        if self.controlled:
-            # print(f"ROBOT: new dir - {self.new_dir}")
-            new_pos = self.pos + (self.new_dir * self.max_speed)
-
-            self.target_px = self.pos + (self.new_dir * 100)
-            self.pos = np.array(new_pos, dtype=np.float64)
-            self.dir = self.new_dir
-            self.dir_norm = normalize(self.dir)
-            # new orientation is orientation of new direction vector
-            self.ori = math.degrees(math.atan2(self.dir[1], self.dir[0]))
-
-        elif self.auto_move:
-            if self.real_robot is not None:
-                # new position is old position plus new direction vector times speed
+            # change target if robot is controlled (joystick)
+            if self.controlled:
+                # print(f"ROBOT: new dir - {self.new_dir}")
                 new_pos = self.pos + (self.new_dir * self.max_speed)
-                # check if next position would be outside arena and update new_dir if its not
-                inside = self.check_inside_arena(new_pos)
+                # set next target in pixel coordinates
+                self.target_px = self.pos + (self.new_dir * 100)
+                print(
+                    f"ROBOT: new px target: {self.target_px} check if outside of arena!!!!"
+                )
+                # check if next target would be outside arena and update new_dir if its not
+                inside = self.check_inside_arena(self.target_px)
                 if not inside:
                     new_pos = self.pos + (self.new_dir * self.max_speed)
-                self.target_px = self.pos + (self.new_dir * 100)
+                    self.target_px = self.pos + (self.new_dir * 100)
+
+                # check if near arena borders and repulse from nearest border point
+                self.arena_points = self.arena.getNearestArenaPoints(new_pos)
+
+                for point in self.arena_points:  # arena points
+                    if point[1] < self.arena_repulsion:
+                        print(f"ROBOT: close point - {point[0]}")
+                        # print(f"repulse from {point[0]}")
+
                 self.pos = np.array(new_pos, dtype=np.float64)
                 self.dir = self.new_dir
                 self.dir_norm = normalize(self.dir)
                 # new orientation is orientation of new direction vector
                 self.ori = math.degrees(math.atan2(self.dir[1], self.dir[0]))
-            # if no real robot just move automatically
+            # automatic movement if not in charging or controlled state
             else:
-                super().move()
-        else:
-            print(f"ROBOT: No Movement")
+                if self.real_robot is not None:
+                    # new position is old position plus new direction vector times speed
+                    new_pos = self.pos + (self.new_dir * self.max_speed)
+                    # set next target in pixel coordinates
+                    self.target_px = self.pos + (self.new_dir * 100)
+                    # check if next target would be outside arena and update new_dir if its not
+                    inside = self.check_inside_arena(self.target_px)
+                    if not inside:
+                        new_pos = self.pos + (self.new_dir * self.max_speed)
+                        self.target_px = self.pos + (self.new_dir * 100)
+                    self.pos = np.array(new_pos, dtype=np.float64)
+                    self.dir = self.new_dir
+                    self.dir_norm = normalize(self.dir)
+                    # new orientation is orientation of new direction vector
+                    self.ori = math.degrees(math.atan2(self.dir[1], self.dir[0]))
+
+                # if no real robot just move automatically
+                else:
+                    super().move()
+
+        except:
+            print(f"\nROBOT: Error in move!")
 
     def set_voltage(self, voltage):
         try:
@@ -120,12 +146,15 @@ class Robot(Agent):
             print("ROBOT: Error in set_voltage!")
 
     def set_charging(self, is_charging):
-        self.charging = is_charging
+        try:
+            self.charging = is_charging
 
-        if self.charging:
-            self.go_to_charging_station = (
-                False  # arrived at charging station and is charging
-            )
+            if self.charging:
+                self.go_to_charging_station = (
+                    False  # arrived at charging station and is charging
+                )
+        except:
+            print("ROBOT: Error in set_charging!")
 
     def check_if_full(self):
         # if voltage constant for x minutes
@@ -157,15 +186,22 @@ class Robot(Agent):
             # print(f"Robot is NOT fully charged (gradient): {gradient}")
 
     def check_if_low_charge(self):
-        if self.voltage < self.min_voltage and not self.charging:
-            print("ROBOT: LOW CHARGE")
-            self.go_to_charging_station = True
+        try:
+            if self.voltage < self.min_voltage and not self.charging:
+                print("ROBOT: LOW CHARGE")
+                self.go_to_charging_station = True
+        except:
+            print("ROBOT: Error in check_if_low_charge!")
 
     def set_robot(self, robot):
-        self.real_robot = robot
-        if robot:
-            self.pos = np.asarray([robot.position[0], robot.position[1]])
-            self.dir = np.asarray([robot.orientation[0], robot.orientation[1]])
-            self.ori = np.degrees(math.atan2(self.dir[1], self.dir[0]))
+        try:
 
-            print(f"Behavior - Robot: {self.pos}")
+            self.real_robot = robot
+            if robot:
+                self.pos = np.asarray([robot.position[0], robot.position[1]])
+                self.dir = np.asarray([robot.orientation[0], robot.orientation[1]])
+                self.ori = np.degrees(math.atan2(self.dir[1], self.dir[0]))
+
+                print(f"Behavior - Robot: {self.pos}")
+        except:
+            print("ROBOT: Error in set_robot!")

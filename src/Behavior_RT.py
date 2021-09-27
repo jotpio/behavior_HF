@@ -25,7 +25,7 @@ from src.models.robot import Robot
 from src.models.agent import (
     attract,
     repulse,
-    allign,
+    align,
     check_in_radii_vision,
     normalize,
     get_zone_neighbours,
@@ -97,11 +97,11 @@ class Behavior(PythonBehavior):
 
         # initialize robot
         self.behavior_robot = Robot(self.arena, self.config)
-        self.behavior_robot.auto_move = False
-        self.controlled = False
+        # self.controlled = False
         self.trigger_next_robot_step = False
         self.flush_robot_target = False
         self.action = []
+        self.just_started = False
 
         # charger positions
         self.charger_pos = self.config["CHARGER"]["position"]
@@ -165,7 +165,7 @@ class Behavior(PythonBehavior):
 
     def initiate_numba(self):
         repulse(np.asarray([[0.0, 0.0]]), np.asarray([0, 0]))
-        allign(np.asarray([[0.0, 0.0]]))
+        align(np.asarray([[0.0, 0.0]]))
         attract(np.asarray([[0.0, 0.0]]), np.asarray([0, 0]))
         check_in_radii_vision(
             np.asarray([[0.0, 0.0]]),
@@ -278,7 +278,7 @@ class Behavior(PythonBehavior):
 
     # robot slots
     def on_auto_robot_checkbox_changed(self, val):
-        self.behavior_robot.auto_move = val
+        self.behavior_robot.controlled = not val
         self.parameter_ui.next_robot_step.setEnabled(not val)
         self.parameter_ui.flush_robot_button.setEnabled(not val)
 
@@ -329,6 +329,7 @@ class Behavior(PythonBehavior):
         self.robot = robot
         self.behavior_robot.set_robot(robot)
         self.world = world
+        self.just_started = True
 
     def deactivate(self):
         print("Behavior: Deactivated")
@@ -343,146 +344,166 @@ class Behavior(PythonBehavior):
     # looping method
     #
     def next_speeds(self, robots, fish, timestep):
+        
+        # at start go to middle of arena
+        try:
+            if self.just_started:
+                middle_pos = [self.arena.width/2,self.arena.height/2]
+                self.action = [
+                                RobotActionFlush(self.robot.uid),
+                                RobotActionToTarget(self.robot.uid, 0, (middle_pos[0], middle_pos[1])),
+                                ]
+                # check if roughly at middle pos then robot is free
+                diff = np.abs(np.asarray(middle_pos) - self.behavior_robot.pos)
+                if diff[0] < 100 and diff[1] < 100:
+                    self.just_started = False
+        except:
+            print(f"\nBEHAVIOR: Error in start movement")
 
-        # Move fish (simulate)
-        if self.optimisation:
-            start_time = time.time()
 
-        # execute all commands in queue first
-        while not (self.com_queue.empty()):
-            command = self.com_queue.get()
-            if self.config["DEBUG"]["console"]:
-                print(command)
+        try:
+            if self.optimisation:
+                start_time = time.time()
+
             try:
-                func = getattr(self, command[0])
-                args = command[1:]
-                func(*args)
+                # execute all commands in queue first
+                while not (self.com_queue.empty()):
+                    command = self.com_queue.get()
+                    if self.config["DEBUG"]["console"]:
+                        print(command)
+                    try:
+                        func = getattr(self, command[0])
+                        args = command[1:]
+                        func(*args)
+                    except:
+                        print(f"Command not found or error in command execution! {command}")
             except:
-                print(f"Command not found or error in command execution! {command}")
+                print(f"\nBEHAVIOR: Error in command queue")
 
-        # update behavior robot position, voltage, dir and ori if RT loaded
-        if RT_MODE:
-            robots = [r for r in robots if r.uid == self.robot.uid]
+            # update behavior robot position, voltage, dir and ori if RT loaded
+            try:
+                if RT_MODE:
+                    self.set_robot_attributes(robots)     
+            except:
+                print(f"\nBEHAVIOR: Error in robot update")
 
-            pos_cm = robots[0].position
-            pos_px = self.util.map_cm_to_px(pos_cm)
-            self.behavior_robot.pos = np.asarray([pos_px[0], pos_px[1]])
-
-            dir = robots[0].orientation
-            self.behavior_robot.dir = np.asarray([dir[0], dir[1]])
-            self.behavior_robot.dir_norm = normalize(self.behavior_robot.dir)
-            self.behavior_robot.ori = math.degrees(math.atan2(dir[1], dir[0]))
-            self.behavior_robot.set_voltage(robots[0].voltage)
-            self.behavior_robot.set_charging(robots[0].chargingStatus)
-            print(
-                f"Behavior - ROBOT voltage: {self.behavior_robot.voltage}, pos: {pos_px}, charging status: {self.behavior_robot.charging}"
-            )
-
-        # check for flush robot target triggered
-        if self.flush_robot_target and not self.action:
-            self.flush_robot_target = False
-            self.action = [
-                RobotActionFlush(self.robot.uid),
-                RobotActionHalt(self.robot.uid, 0),
-            ]
-
-        # no robot then send halt
-        if not robots and not self.action:
-            self.action = [
-                RobotActionFlush(self.robot.uid),
-                RobotActionHalt(self.robot.uid, 0),
-            ]
-        else:
-            # charging routine
-            self.action = self.charging_routine()
-
-            # robot control buttons
-            if self.target is not None:
-                print(f"Set target to {self.target}")
-                target = self.target
-                self.target = None
-                if not self.action:
+            try:
+                # check for flush robot target triggered
+                if self.flush_robot_target and not self.action:
+                    self.flush_robot_target = False
                     self.action = [
                         RobotActionFlush(self.robot.uid),
-                        RobotActionToTarget(self.robot.uid, 0, (target[0], target[1])),
+                        RobotActionHalt(self.robot.uid, 0),
                     ]
-            if self.turn_left and not self.action:
-                self.action = [
-                    RobotActionDirect(self.robot.uid, 0, 0.0, 5.0),
-                ]
 
-            if self.turn_right and not self.action:
-                self.action = [
-                    RobotActionDirect(self.robot.uid, 0, 5.0, 0.0),
-                ]
-
-        # TICK - update all fish one time step forward (tick)
-        all_agents = [self.behavior_robot]
-        all_agents.extend(self.allfish)
-        all_pos = np.asarray([np.array(a.pos, dtype=np.float64) for a in all_agents])
-        all_dir = np.asarray([a.dir for a in all_agents])
-        dist_m = distance_matrix(all_pos, all_pos)
-
-        for id_f, f in enumerate(all_agents):
-            f.tick(all_pos, all_dir, dist_m[id_f])
-            # check if fish following the robot
-            if id_f != 0:
-                robot_pos = all_pos[0]
-                robot_dir = all_dir[0]
-                f.check_following(robot_pos, robot_dir)
-
-        # MOVE - move everything by new updated direction and speed
-        for f in all_agents:
-            f.move()
-
-        if (
-            not self.behavior_robot.charging
-            and not self.behavior_robot.go_to_charging_station
-        ):
-            if RT_MODE and (
-                self.behavior_robot.auto_move and (not self.behavior_robot.controlled)
-            ):
-                # get new robot target and move there
-                target = self.util.map_px_to_cm(self.behavior_robot.target_px)
-                if not self.action:
+                # no robot then send halt
+                if not robots and not self.action:
                     self.action = [
                         RobotActionFlush(self.robot.uid),
-                        RobotActionToTarget(self.robot.uid, 0, (target[0], target[1])),
+                        RobotActionHalt(self.robot.uid, 0),
                     ]
-            elif RT_MODE and self.trigger_next_robot_step:
-                # move to next target on pushbutton press
-                target = self.util.map_px_to_cm(self.behavior_robot.target_px)
+                else:
+                    # charging routine
+                    self.action = self.charging_routine()
+
+                    # robot control buttons
+                    if self.target is not None:
+                        print(f"Set target to {self.target}")
+                        target = self.target
+                        self.target = None
+                        if not self.action:
+                            self.action = [
+                                RobotActionFlush(self.robot.uid),
+                                RobotActionToTarget(self.robot.uid, 0, (target[0], target[1])),
+                            ]
+                    if self.turn_left and not self.action:
+                        self.action = [
+                            RobotActionDirect(self.robot.uid, 0, 0.0, 5.0),
+                        ]
+
+                    if self.turn_right and not self.action:
+                        self.action = [
+                            RobotActionDirect(self.robot.uid, 0, 5.0, 0.0),
+                        ]
+            except:
+                print(f"\nBEHAVIOR: Error in robot priority actions/ charging behavior")
+
+            # TICK - update all fish one time step forward (tick)
+            try:
+
+                all_agents = [self.behavior_robot]
+                all_agents.extend(self.allfish)
+                all_pos = np.asarray([np.array(a.pos, dtype=np.float64) for a in all_agents])
+                all_dir = np.asarray([a.dir for a in all_agents])
+                dist_m = distance_matrix(all_pos, all_pos)
+
+                for id_f, f in enumerate(all_agents):
+                    f.tick(all_pos, all_dir, dist_m[id_f])
+                    # check if fish following the robot
+                    if id_f != 0:
+                        robot_pos = all_pos[0]
+                        robot_dir = all_dir[0]
+                        f.check_following(robot_pos, robot_dir)
+            except:
+                print(f"\nBEHAVIOR: Error in tick")
+
+            # MOVE - move everything by new updated direction and speed
+            try:
+                for f in all_agents:
+                    f.move()
+
+                if (
+                    not self.behavior_robot.charging
+                    and not self.behavior_robot.go_to_charging_station
+                ):
+                    if RT_MODE and not self.behavior_robot.controlled:
+                        # get new robot target and move there
+                        target = self.util.map_px_to_cm(self.behavior_robot.target_px)
+                        print(f"ROBOT: new cm target: {target}")
+
+                        if not self.action:
+                            self.action = [
+                                RobotActionFlush(self.robot.uid),
+                                RobotActionToTarget(self.robot.uid, 0, (target[0], target[1])),
+                            ]
+                    elif RT_MODE and self.trigger_next_robot_step:
+                        # move to next target on pushbutton press
+                        target = self.util.map_px_to_cm(self.behavior_robot.target_px)
+                        print(
+                            f"Move robot to new location: {self.behavior_robot.pos}\ntarget px: {self.behavior_robot.target_px}\ntarget cm: {target}\ndir: {self.behavior_robot}\nrobot dir: {robots[0].orientation}"
+                        )
+                        if not self.action:
+                            self.action = [
+                                RobotActionFlush(self.robot.uid),
+                                RobotActionToTarget(self.robot.uid, 0, (target[0], target[1])),
+                            ]
+                        self.trigger_next_robot_step = False
+            except:
+                print(f"\nBEHAVIOR: Error in move")
+
+            # Update fish in tracking view and send positions
+            self.network_controller.update_positions.emit(self.serialize())
+
+            # print("end of next speeds")
+
+            if self.optimisation:
+                end_time = time.time()
+                exec_time = end_time - start_time
+
+                if self.exec_stepper == 100:
+                    self.exec_stepper = 0
+                    self.exec_time = 0
+                self.exec_stepper += 1
+                self.exec_time += exec_time
+                mean_exec_time = self.exec_time / self.exec_stepper
                 print(
-                    f"Move robot to new location: {self.behavior_robot.pos}\ntarget px: {self.behavior_robot.target_px}\ntarget cm: {target}\ndir: {self.behavior_robot}\nrobot dir: {robots[0].orientation}"
+                    f"mean tick takes {mean_exec_time} seconds; last tick took {exec_time} seconds"
                 )
-                if not self.action:
-                    self.action = [
-                        RobotActionFlush(self.robot.uid),
-                        RobotActionToTarget(self.robot.uid, 0, (target[0], target[1])),
-                    ]
-                self.trigger_next_robot_step = False
-
-        # Update fish in tracking view and send positions
-        self.network_controller.update_positions.emit(self.serialize())
-
-        # print("end of next speeds")
-
-        if self.optimisation:
-            end_time = time.time()
-            exec_time = end_time - start_time
-
-            if self.exec_stepper == 100:
-                self.exec_stepper = 0
-                self.exec_time = 0
-            self.exec_stepper += 1
-            self.exec_time += exec_time
-            mean_exec_time = self.exec_time / self.exec_stepper
-            print(
-                f"mean tick takes {mean_exec_time} seconds; last tick took {exec_time} seconds"
-            )
-        return_action = self.action
-        self.action = []
-        return return_action
+            return_action = self.action
+            self.action = []
+            return return_action
+        except:
+            print(f"\nBEHAVIOR: Error in next_speeds!")
 
     def run_thread(self):
         timestep = 0
@@ -490,6 +511,23 @@ class Behavior(PythonBehavior):
             self.next_speeds([], [], timestep)
             timestep += 1
             time.sleep(self.time_step)
+    
+    def set_robot_attributes(self, robots):
+        robots = [r for r in robots if r.uid == self.robot.uid]
+
+        pos_cm = robots[0].position
+        pos_px = self.util.map_cm_to_px(pos_cm)
+        self.behavior_robot.pos = np.asarray([pos_px[0], pos_px[1]])
+
+        dir = robots[0].orientation
+        self.behavior_robot.dir = np.asarray([dir[0], dir[1]])
+        self.behavior_robot.dir_norm = normalize(self.behavior_robot.dir)
+        self.behavior_robot.ori = math.degrees(math.atan2(dir[1], dir[0]))
+        self.behavior_robot.set_voltage(robots[0].voltage)
+        self.behavior_robot.set_charging(robots[0].chargingStatus)
+        print(
+            f"Behavior - ROBOT voltage: {self.behavior_robot.voltage}, pos: {pos_px}, charging status: {self.behavior_robot.charging}"
+        )
 
     def charging_routine(self):
         action = []
@@ -663,10 +701,12 @@ class Behavior(PythonBehavior):
 
     def change_robodir(self, dir):
         np_dir = np.asarray(dir)
-        dir_len = np.linalg.norm(np_dir)
-        self.behavior_robot.new_dir = (
-            np_dir / dir_len if dir_len != 0 else np.asarray([0, 0])
-        )
+
+        self.behavior_robot.new_dir = normalize(np_dir)
+        # dir_len = np.linalg.norm(np_dir)
+        # self.behavior_robot.new_dir = (
+        #     np_dir / dir_len if dir_len != 0 else np.asarray([0, 0])
+        # )
 
     def change_zones(self, zone_dir):
         self.zor = zone_dir.get("zor", self.zor)
