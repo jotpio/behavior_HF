@@ -491,6 +491,13 @@ class Behavior(QObject):
             for i in range(num)
         ]
 
+        # always set fish with id 1 to position 1500,500 if existing
+        if len(self.allfish) > 0:
+            if self.allfish[0].id == 1:
+                self.allfish[0].pos = np.asarray([1500, 500])
+            else:
+                print("BEHAVIOR: Fish with id 1 not existing!")
+
         self.network_controller.update_ellipses.emit(self.behavior_robot, self.allfish)
 
     def control_robot(self, flag):

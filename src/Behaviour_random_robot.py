@@ -62,6 +62,7 @@ class Behavior(PythonBehavior):
 
         print(robots[0].voltage)
         print(robots[0].chargingStatus)
+        print(robots[0].position)
         if not robots:
             print("No robot found!")
             return [

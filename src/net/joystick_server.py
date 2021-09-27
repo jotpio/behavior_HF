@@ -37,6 +37,7 @@ class JoystickServer(ServerListenerThread):
                         # print(f"JOYSERVER: Received {data}")
 
                         if data == "end connection":
+                            self.print("Closing socket!")
                             self.close_socket()
                             break
 

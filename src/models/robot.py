@@ -136,7 +136,11 @@ class Robot(Agent):
         # print(f"ROBOT second voltage list: {voltage_list_sec}")
 
         # check if voltage x minutes ago the same as current or voltage larger than 8.1
-        if voltage_list_min[0] == self.voltage or self.voltage > 8.1:
+        if (
+            voltage_list_min[0] == self.voltage
+            and len(voltage_list_min) == 10
+            and self.voltage > 8
+        ) or self.voltage > 8.1:
             print("Robot is fully charged")
             self.fullCharge = True
 

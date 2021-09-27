@@ -37,6 +37,7 @@ class CommandListenerServer(ServerListenerThread):
                             break
 
                         if data == "end connection":
+                            self.print("closing socket!")
                             self.close_socket()
                             break
 

@@ -184,7 +184,6 @@ class Behavior(PythonBehavior):
             50,
             150,
         )
-
         normalize(np.asarray([1.4, 2.0]))
 
     def setup_parameter_layout(self):
@@ -651,6 +650,10 @@ class Behavior(PythonBehavior):
             )
             for i in range(num)
         ]
+
+        # always set fish with id 1 to position 1500,500 if existing
+        if len(self.allfish) > 0:
+            self.allfish[0].pos = np.asarray([1500, 500])
 
         self.network_controller.update_ellipses.emit(self.behavior_robot, self.allfish)
 

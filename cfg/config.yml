@@ -9,7 +9,7 @@ DEBUG:
   #dummy_joystick_client: false
 
 DEFAULTS:
-  number_of_fish: 1
+  number_of_fish: 0
   zoa: 200
   zoo: 80
   zor: 10
@@ -25,7 +25,7 @@ DEFAULTS:
 ARENA:
   width: 2000
   height: 2000
-  repulsion: 150
+  repulsion: 200
 
 WORLD:
   width: 64
@@ -38,7 +38,7 @@ NETWORK:
   charge_port: 13006
 
 CHARGER:
-  position: [-18, 1800]
+  position: [94, 1800]
 
 ROBOT:
   controlled_from_start: true
