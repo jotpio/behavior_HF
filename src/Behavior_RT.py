@@ -101,6 +101,7 @@ class Behavior(PythonBehavior):
         self.trigger_next_robot_step = False
         self.flush_robot_target = False
         self.action = []
+        self.just_started = False
 
         # charger positions
         self.charger_pos = self.config["CHARGER"]["position"]
@@ -329,6 +330,7 @@ class Behavior(PythonBehavior):
         self.robot = robot
         self.behavior_robot.set_robot(robot)
         self.world = world
+        self.just_started = True
 
     def deactivate(self):
         print("Behavior: Deactivated")
@@ -343,6 +345,23 @@ class Behavior(PythonBehavior):
     # looping method
     #
     def next_speeds(self, robots, fish, timestep):
+        
+        # at start go to middle of arena
+        try:
+            if self.just_started:
+                middle_pos = [self.arena.width/2,self.arena.height/2]
+                self.action = [
+                                RobotActionFlush(self.robot.uid),
+                                RobotActionToTarget(self.robot.uid, 0, (middle_pos[0], middle_pos[1])),
+                                ]
+                # check if roughly at middle pos then robot is free
+                diff = np.abs(np.asarray(middle_pos) - self.behavior_robot.pos)
+                if diff[0] < 100 and diff[1] < 100:
+                    self.just_started = False
+        except:
+            print(f"\nBEHAVIOR: Error in start movement")
+
+
         try:
             if self.optimisation:
                 start_time = time.time()
@@ -365,21 +384,7 @@ class Behavior(PythonBehavior):
             # update behavior robot position, voltage, dir and ori if RT loaded
             try:
                 if RT_MODE:
-                    robots = [r for r in robots if r.uid == self.robot.uid]
-
-                    pos_cm = robots[0].position
-                    pos_px = self.util.map_cm_to_px(pos_cm)
-                    self.behavior_robot.pos = np.asarray([pos_px[0], pos_px[1]])
-
-                    dir = robots[0].orientation
-                    self.behavior_robot.dir = np.asarray([dir[0], dir[1]])
-                    self.behavior_robot.dir_norm = normalize(self.behavior_robot.dir)
-                    self.behavior_robot.ori = math.degrees(math.atan2(dir[1], dir[0]))
-                    self.behavior_robot.set_voltage(robots[0].voltage)
-                    self.behavior_robot.set_charging(robots[0].chargingStatus)
-                    print(
-                        f"Behavior - ROBOT voltage: {self.behavior_robot.voltage}, pos: {pos_px}, charging status: {self.behavior_robot.charging}"
-                    )
+                    self.set_robot_attributes(robots)     
             except:
                 print(f"\nBEHAVIOR: Error in robot update")
 
@@ -507,6 +512,23 @@ class Behavior(PythonBehavior):
             self.next_speeds([], [], timestep)
             timestep += 1
             time.sleep(self.time_step)
+    
+    def set_robot_attributes(self, robots):
+        robots = [r for r in robots if r.uid == self.robot.uid]
+
+        pos_cm = robots[0].position
+        pos_px = self.util.map_cm_to_px(pos_cm)
+        self.behavior_robot.pos = np.asarray([pos_px[0], pos_px[1]])
+
+        dir = robots[0].orientation
+        self.behavior_robot.dir = np.asarray([dir[0], dir[1]])
+        self.behavior_robot.dir_norm = normalize(self.behavior_robot.dir)
+        self.behavior_robot.ori = math.degrees(math.atan2(dir[1], dir[0]))
+        self.behavior_robot.set_voltage(robots[0].voltage)
+        self.behavior_robot.set_charging(robots[0].chargingStatus)
+        print(
+            f"Behavior - ROBOT voltage: {self.behavior_robot.voltage}, pos: {pos_px}, charging status: {self.behavior_robot.charging}"
+        )
 
     def charging_routine(self):
         action = []
