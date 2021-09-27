@@ -8,6 +8,7 @@ import yaml  # pyyaml
 import queue
 from pathlib import Path
 import sys
+import os
 from scipy.spatial import distance_matrix
 from collections.abc import Iterable
 
@@ -34,7 +35,7 @@ from src.util.util import Util
 from PyQt5.sip import wrapinstance as wrapInstance
 
 from PyQt5.QtWidgets import *
-from PyQt5.QtCore import Qt, pyqtSignal, QObject, QEvent
+from PyQt5.QtCore import Qt, pyqtSignal, QObject, QEvent, QTimer 
 
 # from PyQt5.QtWidgets import QLayout, QVBoxLayout, QPushButton
 
@@ -93,6 +94,12 @@ class Behavior(QObject):
         # time step in seconds
         self.time_step = self.config["DEFAULTS"]["time_step"]
 
+        # heartbeat
+        self.heartbeat_timer = QTimer()
+        self.heartbeat_timer.timeout.connect(self.heartbeat)
+        self.heartbeat_timer.start(5000) # trigger every 5 seconds
+
+
         # arena
         self.arena = Arena(
             [0, 0], self.config["ARENA"]["width"], self.config["ARENA"]["height"]
@@ -145,6 +152,13 @@ class Behavior(QObject):
         self.movelist = []
 
         print("Behavior: Initialized!")
+
+    def heartbeat(self):
+        heartbeat_path = "/home/hf-robofish/RTlog.txt"
+        if not os.path.isfile(heartbeat_path):
+            os.mknod(heartbeat_path)
+        else:
+            print("heartbeat still exists")
 
     def initiate_numba(self):
         repulse(np.asarray([[0.0, 0.0]]), np.asarray([0, 0]))
