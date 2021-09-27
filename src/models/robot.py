@@ -19,7 +19,7 @@ class Robot(Agent):
             [], self.max_charging_time
         )  # one for each minute
         self.old_voltages_second_queue = deque([], 60)  # one for each second
-        self.new_dir = np.asarray([0.1, 0])
+        self.new_dir = np.asarray([0.00001, 0])
         self.real_robot = None
         self.target_px = [0, 0]
         self.charging = False
@@ -29,6 +29,9 @@ class Robot(Agent):
 
         self.min_voltage = self.config["ROBOT"]["min_voltage"]
         self.max_voltage = self.config["ROBOT"]["max_voltage"]
+
+        self.max_turn_rate = self.config["ROBOT"]["max_turn_rate"]
+        self.error_deg = self.config["ROBOT"]["error_deg"]
 
     def tick(self, fishpos, fishdir, dists):
         try:
@@ -166,10 +169,8 @@ class Robot(Agent):
 
         # check if voltage x minutes ago the same as current or voltage larger than 8.1
         if (
-            voltage_list_min[0] == self.voltage
-            and len(voltage_list_min) == 10
-            and self.voltage > 8
-        ) or self.voltage > 8.1:
+            voltage_list_min[0] == self.voltage and len(voltage_list_min) == 10
+        ) or self.voltage > 8.05:
             print("Robot is fully charged")
             self.fullCharge = True
 

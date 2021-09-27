@@ -48,10 +48,6 @@ class NetworkController(QObject):
             self.charge_client.send_command, Qt.QueuedConnection
         )
 
-        # p_thread.join()
-        # c_thread.join()
-        # j_thread.join()
-
     def exit(self):
         self.p_thread.join()
         self.c_thread.join()

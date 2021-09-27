@@ -61,6 +61,8 @@ class Behavior(QObject):
     def __init__(self, layout=None, DEBUG_VIS=None, config=None):
         super().__init__()
 
+        # self.initiate_numba()
+
         self.robot = None
         self.world = None
         self.target = None

@@ -88,7 +88,9 @@ class Agent:
                     dirs_zoo,
                     points_zoa,
                     self.influenced_by_robot,
-                ) = get_zone_neighbours(dists, fishpos, fishdir, self.zor, self.zoo, self.zoa)
+                ) = get_zone_neighbours(
+                    dists, fishpos, fishdir, self.zor, self.zoo, self.zoa
+                )
                 points_zor = points_zor.tolist()
 
                 if self.optimisation_individual:
@@ -156,17 +158,18 @@ class Agent:
                     try:
                         # align
                         dir_o = align(np.asarray(dirs_zoo))
-                    except:
+                    except Exception as e:
                         print(f"\nAGENT: Error in align - id {self.id}")
+                        print(e)
 
                 dir_a = np.asarray([0, 0])
                 if n_zoa > 0:
                     try:
                         # attract
                         dir_a = attract(np.asarray(points_zoa), pos)
-                    except:
+                    except Exception as e:
                         print(f"\nAGENT: Error in attract - id {self.id}")
-                    
+                        print(e)
 
                 # combine calculated directions
                 if n_zoa == 0 and n_zoo > 0:
@@ -199,7 +202,9 @@ class Agent:
             try:
                 len_dir = np.linalg.norm(self.dir)
                 len_dirt1 = np.linalg.norm(dirt1)
-                unit_vector_1 = (self.dir / len_dir) if len_dir != 0 else np.asarray([0.0, 0.0])
+                unit_vector_1 = (
+                    (self.dir / len_dir) if len_dir != 0 else np.asarray([0.0, 0.0])
+                )
                 unit_vector_2 = (
                     (dirt1 / len_dirt1) if len_dirt1 != 0 else np.asarray([0.0, 0.0])
                 )
@@ -308,7 +313,6 @@ class Agent:
             self.zoo = zoo
         if zoa:
             self.zoa = zoa
-
 
 
 @jit(nopython=True)
@@ -425,7 +429,7 @@ def attract(points_zoa, pos):
 def normalize(v):
     """
     Normalize vectors or arrays of vectors (matrices)
-    
+
     input vector must be a ndarray!
     vector magnitude cannot be 0!
     from: https://stackoverflow.com/questions/2850743/numpy-how-to-quickly-normalize-many-vectors
@@ -433,8 +437,8 @@ def normalize(v):
     magnitudes = np.sqrt((v ** 2).sum(-1))
     if v.ndim > 1:
         magnitudes = np.expand_dims(magnitudes, 1)
-    #check if magnitudes nan or 0
-    if np.any(np.isnan(magnitudes)) or magnitudes == 0:
+    # check if magnitudes nan or 0
+    if np.any(np.asarray(np.isnan(magnitudes))) or np.all(np.asarray(magnitudes == 0)):
         out = v
     else:
         out = v / magnitudes
