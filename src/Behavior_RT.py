@@ -32,6 +32,8 @@ from src.models.agent import (
     get_zone_neighbours,
 )
 from src.util.util import Util
+from src.util.heartbeat import HeartbeatTimer
+
 
 from PyQt5.sip import wrapinstance as wrapInstance
 
@@ -92,9 +94,10 @@ class Behavior(PythonBehavior):
         self.time_step = self.config["DEFAULTS"]["time_step"]
 
         # heartbeat
-        self.heartbeat_timer = QTimer()
-        self.heartbeat_timer.timeout.connect(self.heartbeat)
-        self.heartbeat_timer.start(5000) # trigger every 5 seconds
+        self.heartbeat_obj = HeartbeatTimer()
+        self.heartbeat_thread = threading.Thread(target=self.heartbeat_obj.run_thread)
+        self.heartbeat_thread.daemon = True
+        self.heartbeat_thread.start()
 
         # arena
         self.arena = Arena(
@@ -168,14 +171,6 @@ class Behavior(PythonBehavior):
         self.turn_right = False
 
         print("Behavior: Initialized!")
-
-    def heartbeat(self):
-        try:
-            heartbeat_path = "/home/hf-robofish/RTlog.txt"
-            if not os.path.isfile(heartbeat_path):
-                os.mknod(heartbeat_path)
-        except:
-            print("BEHAVIOR: Error in heartbeat!")
 
     def initiate_numba(self):
         repulse(np.asarray([[0.0, 0.0]]), np.asarray([0, 0]))
