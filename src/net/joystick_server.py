@@ -26,7 +26,11 @@ class JoystickServer(ServerListenerThread):
                 try:
                     amount_received = 0
                     while amount_received < 4096:
-                        data = self.conn.recv(4096).decode("utf-8")
+                        data = self.conn.recv(4096)
+                        print(data)
+                        data = data.decode("utf-8")
+
+                        print(data)
 
                         if len(data) == 0:
                             self.print("Empty data; closing socket!")
@@ -43,6 +47,7 @@ class JoystickServer(ServerListenerThread):
 
                         if not self.debug:
                             parsed_data = self.parse_data(data)
+                            self.print("parsed")
                             self.control_robot.emit(["control_robot", True])
                             self.send_robodir.emit(["change_robodir", parsed_data])
                 except:
@@ -56,6 +61,13 @@ class JoystickServer(ServerListenerThread):
 
     def parse_data(self, data):
         # data will have the shape "+/-x.xx, +/-x.xx", e.g. "+0.71, -0.13"
-        split_data = data.split(", ")
-        parsed_data = [float(split_data[0]), -float(split_data[1])]  # flip the y value
-        return parsed_data
+        try:
+            split_data = data.split(", ")
+            print(split_data)
+            parsed_data = [
+                float(split_data[0].replace(",", ".")),
+                -float(split_data[1].replace(",", ".")),
+            ]  # flip the y value
+            return parsed_data
+        except:
+            self.print("Error in parsing joystick message!")
