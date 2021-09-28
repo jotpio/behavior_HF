@@ -5,6 +5,8 @@ import time
 from datetime import datetime
 from collections import deque
 from PyQt5.QtCore import *
+import logging
+from logging.handlers import TimedRotatingFileHandler
 
 
 class Robot(Agent):
@@ -33,6 +35,19 @@ class Robot(Agent):
 
         self.max_turn_rate = self.config["ROBOT"]["max_turn_rate"]
         self.error_deg = self.config["ROBOT"]["error_deg"]
+
+        formatter = logging.Formatter("%(asctime)s -8s %(message)s")
+
+        self.logger = logging.getLogger("robot_logger")
+        handler = TimedRotatingFileHandler(
+            self.config["LOGGING"]["ROBOT"], when="H", interval=1
+        )
+        handler.setFormatter(formatter)
+        # handler.setLevel(logging.CRITICAL)
+        self.logger.addHandler(handler)
+        self.logcounter = 0
+
+        self.logger.warning(f"Started a new robot: {datetime.now()}")
 
     def tick(self, fishpos, fishdir, dists):
         try:
@@ -79,6 +94,14 @@ class Robot(Agent):
                 self.dir_norm = normalize(self.dir)
                 # new orientation is orientation of new direction vector
                 self.ori = math.degrees(math.atan2(self.dir[1], self.dir[0]))
+
+                # log direction every few ticks
+                if self.logcounter == 5:
+                    self.logger.warning(f"{self.pos}, {self.dir}")
+                    self.logcounter = 0
+                self.logcounter += 1
+
+
             # automatic movement if not in charging or controlled state
             else:
                 if self.real_robot is not None:
@@ -207,7 +230,6 @@ class Robot(Agent):
                 print(f"Behavior - Robot: {self.pos}")
         except:
             print("ROBOT: Error in set_robot!")
-
 
     def check_inside_arena(self, next_pos):
         # check if fish would go out of arena and correct direction if so
