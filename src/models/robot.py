@@ -4,6 +4,7 @@ import math
 import time
 from datetime import datetime
 from collections import deque
+from PyQt5.QtCore import *
 
 
 class Robot(Agent):
@@ -206,3 +207,33 @@ class Robot(Agent):
                 print(f"Behavior - Robot: {self.pos}")
         except:
             print("ROBOT: Error in set_robot!")
+
+
+    def check_inside_arena(self, next_pos):
+        # check if fish would go out of arena and correct direction if so
+        next_pos_point = QPointF(next_pos[0], next_pos[1])
+        arena_rect = self.arena.rect
+
+        if not arena_rect.contains(next_pos_point):
+            # print(f"Fish will outside of Arena!")
+            # set pos to nearest arena wall (the one that was crossed)
+            self.arena_points = np.asarray(self.arena_points, dtype=object)
+            id_closest_arena_p = np.argmin(self.arena_points[:, 1])
+            # self.pos = self.arena_points[id_closest_arena_p][0]
+            print(id_closest_arena_p)
+            
+            # set new dir toward the middle, away from wall
+            # top edge
+            if id_closest_arena_p == 0:
+                self.new_dir = np.asarray([0.0, 1.0])  # go down
+            # right edge
+            elif id_closest_arena_p == 1:
+                self.new_dir = np.asarray([-1.0, 0.0])  # go left
+            # bottom edge
+            elif id_closest_arena_p == 2:
+                self.new_dir = np.asarray([0.0, -1.0])  # go up
+            # left edge
+            elif id_closest_arena_p == 3:
+                self.new_dir = np.asarray([1.0, 0.0])  # go right
+            return False
+

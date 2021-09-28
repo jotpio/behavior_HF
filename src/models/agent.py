@@ -261,8 +261,9 @@ class Agent:
             self.dir_norm = normalize(self.dir)
             # new orientation is orientation of new direction vector
             self.ori = math.degrees(math.atan2(self.dir[1], self.dir[0]))
-        except:
+        except Exception as e:
             print(f"\nAGENT: Error in move - id {self.id}")
+            print(e)
 
         # print(pos, self.pos)
 
@@ -277,7 +278,7 @@ class Agent:
             self.arena_points = np.asarray(self.arena_points, dtype=object)
             id_closest_arena_p = np.argmin(self.arena_points[:, 1])
             # self.pos = self.arena_points[id_closest_arena_p][0]
-
+            print(id_closest_arena_p)
             # set new dir parallel to closest arena wall
 
             # top edge
@@ -314,7 +315,6 @@ class Agent:
         if zoa:
             self.zoa = zoa
 
-
 @jit(nopython=True)
 def check_in_vision(half_vision_cos, dir_norm, pos, point):
     between_v = np.asarray(point) - pos
@@ -340,7 +340,6 @@ def check_in_vision(half_vision_cos, dir_norm, pos, point):
     # print(f"in vision - angle {deg_angle}")
     return True
 
-
 @jit(nopython=True)
 def check_in_radii_vision(p_zor, d_zoo, p_zoa, half_vision_cos, dir_norm, pos):
     points_zor = []
@@ -364,7 +363,6 @@ def check_in_radii_vision(p_zor, d_zoo, p_zoa, half_vision_cos, dir_norm, pos):
 
     return points_zor, dirs_zoo, points_zoa
 
-
 @jit(nopython=True)
 def get_zone_neighbours(dists, fishpos, fishdir, zor, zoo, zoa):
     zor_iarr = (dists != 0) & (dists <= zor)
@@ -379,13 +377,11 @@ def get_zone_neighbours(dists, fishpos, fishdir, zor, zoo, zoa):
         influenced_by_robot = True
     else:
         influenced_by_robot = False
-
     points_zor = fishpos[zor_iarr]  # fish and arena points in zor
     dirs_zoo = fishdir[zoo_iarr]  # fish in zoo
     points_zoa = fishpos[zoa_iarr]  # fish in zoa
 
     return points_zor, dirs_zoo, points_zoa, influenced_by_robot
-
 
 @jit(nopython=True)
 def repulse(points_zor, pos):
@@ -401,7 +397,6 @@ def repulse(points_zor, pos):
 
     return dir_r
 
-
 @jit(nopython=True)
 def align(dirs_zoo):
     # dir_o = np.asarray([0.0, 0.0])
@@ -410,7 +405,6 @@ def align(dirs_zoo):
     unit_dirs_zoo = normalize(dirs_zoo)
     # print(unit_dirs_zoo)
     return np.sum(unit_dirs_zoo, axis=0)
-
 
 @jit(nopython=True)
 def attract(points_zoa, pos):
@@ -423,7 +417,6 @@ def attract(points_zoa, pos):
     # unit_pos_zoa = normalize(points_zoa)
     # for f in points_zoa:
     #     dir_a = dir_a + ((np.asarray(f) - pos) / np.linalg.norm(np.asarray(f) - pos))
-
 
 @jit(nopython=True)
 def normalize(v):
