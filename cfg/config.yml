@@ -1,6 +1,6 @@
 DEBUG:
   console: false
-  visualisation: false
+  visualisation: true
   optimisation: false
   optimisation_individual : false
   debug_charging: false
@@ -17,7 +17,7 @@ DEFAULTS:
   follow_angle: 90
 
   error_deg: 10
-  max_speed: 10
+  max_speed: 5
   max_turn_rate: 200  #per second
 
   time_step: 0.05 #0.05 = 20fps
@@ -41,7 +41,7 @@ CHARGER:
   position: [94, 1820]
 
 ROBOT:
-  controlled_from_start: false
+  controlled_from_start: true
   max_voltage: 8.4
   min_voltage: 7.5
   charging_time: 10 #in minutes
@@ -65,4 +65,4 @@ ZONE_MODES:
 
 LOGGING:
   #ROBOT: '/home/user1/RoboTracker_HF/logs/robot/robot'
-  ROBOT: '/home/hf-robofish/Desktop/robot'
+  ROBOT: 'C:\users\admin\repos\behavior_HF_dummy\robot'

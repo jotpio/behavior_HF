@@ -11,7 +11,7 @@ from logging.handlers import TimedRotatingFileHandler
 
 class Robot(Agent):
     def __init__(self, arena, config):
-        super().__init__(0, [100, 100], 90, arena, config)
+        super().__init__(0, [1000, 1000], 90, arena, config)
 
         self.controlled = config["ROBOT"]["controlled_from_start"]
         self.debug = False
@@ -72,9 +72,7 @@ class Robot(Agent):
                 new_pos = self.pos + (self.new_dir * self.max_speed)
                 # set next target in pixel coordinates
                 self.target_px = self.pos + (self.new_dir * 100)
-                print(
-                    f"ROBOT: new px target: {self.target_px} check if outside of arena!!!!"
-                )
+                print(f"ROBOT: new px target: {self.target_px}")
                 # check if next target would be outside arena and update new_dir if its not
                 inside = self.check_inside_arena(self.target_px)
                 if not inside:
@@ -100,7 +98,6 @@ class Robot(Agent):
                     self.logger.warning(f"{self.pos}, {self.dir}")
                     self.logcounter = 0
                 self.logcounter += 1
-
 
             # automatic movement if not in charging or controlled state
             else:
@@ -243,7 +240,7 @@ class Robot(Agent):
             id_closest_arena_p = np.argmin(self.arena_points[:, 1])
             # self.pos = self.arena_points[id_closest_arena_p][0]
             print(id_closest_arena_p)
-            
+
             # set new dir toward the middle, away from wall
             # top edge
             if id_closest_arena_p == 0:
