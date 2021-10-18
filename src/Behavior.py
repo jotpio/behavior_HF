@@ -96,7 +96,7 @@ class Behavior(QObject):
         self.time_step = self.config["DEFAULTS"]["time_step"]
 
         # heartbeat
-        self.heartbeat_obj = HeartbeatTimer()
+        self.heartbeat_obj = HeartbeatTimer(config)
         self.heartbeat_thread = threading.Thread(target=self.heartbeat_obj.run_thread)
         self.heartbeat_thread.daemon = True
         self.heartbeat_thread.start()

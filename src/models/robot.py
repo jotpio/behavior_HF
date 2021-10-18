@@ -28,6 +28,7 @@ class Robot(Agent):
         self.charging = False
         self.go_to_charging_station = False
         self.fullCharge = False
+        self.user_controlled = False
         self.arena_repulsion = self.config["ROBOT"]["arena_repulsion"]
 
         self.min_voltage = self.config["ROBOT"]["min_voltage"]
@@ -96,7 +97,7 @@ class Robot(Agent):
                 self.ori = math.degrees(math.atan2(self.dir[1], self.dir[0]))
 
                 # log direction every few ticks
-                if self.logcounter == 5:
+                if self.logcounter == 5 and self.user_controlled:
                     self.logger.warning(f"{self.pos}, {self.dir}")
                     self.logcounter = 0
                 self.logcounter += 1
@@ -194,7 +195,7 @@ class Robot(Agent):
         # check if voltage x minutes ago the same as current or voltage larger than 8.1
         if (
             voltage_list_min[0] == self.voltage and len(voltage_list_min) == 10
-        ) or self.voltage > 8.05:
+         and self.voltage > 7.8) or self.voltage > 8.05:
             print("Robot is fully charged")
             self.fullCharge = True
 
