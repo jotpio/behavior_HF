@@ -94,7 +94,7 @@ class Behavior(PythonBehavior):
         self.time_step = self.config["DEFAULTS"]["time_step"]
 
         # heartbeat
-        self.heartbeat_obj = HeartbeatTimer()
+        self.heartbeat_obj = HeartbeatTimer(self.config)
         self.heartbeat_thread = threading.Thread(target=self.heartbeat_obj.run_thread)
         self.heartbeat_thread.daemon = True
         self.heartbeat_thread.start()
@@ -358,6 +358,7 @@ class Behavior(PythonBehavior):
         # at start go to middle of arena
         try:
             if self.just_started:
+                self.robot_starting_routine = True
                 # check if close to charging station first and drive away in charging routine
                 close_to_ch_st = self.check_if_close_to_charging_station()
                 if not close_to_ch_st:
@@ -374,6 +375,7 @@ class Behavior(PythonBehavior):
                     diff = np.abs(np.asarray(middle_pos) - self.behavior_robot.pos)
                     if diff[0] < 100 and diff[1] < 100:
                         self.just_started = False
+                        self.robot_starting_routine = False
                     else:
                         print(f"\nBEHAVIOR: In robot starting routine!!!!\n")
         except:
@@ -782,6 +784,7 @@ class Behavior(PythonBehavior):
 
     def control_robot(self, flag):
         self.behavior_robot.controlled = flag
+        self.behavior_robot.user_controlled = flag
         self.controlled = flag
 
     def change_robodir(self, dir):
