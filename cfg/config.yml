@@ -17,7 +17,7 @@ DEFAULTS:
   follow_angle: 90
 
   error_deg: 10
-  max_speed: 5
+  max_speed: 3
   max_turn_rate: 200  #per second
 
   time_step: 0.05 #0.05 = 20fps
@@ -43,13 +43,17 @@ CHARGER:
   position: [95,1600]
 
 ROBOT:
-  controlled_from_start: true
+  controlled_from_start: false
   max_voltage: 8.0
   min_voltage: 7.4
   charging_time: 10 #in minutes
   arena_repulsion: 300
-  max_turn_rate: 600  #per second
+  max_turn_rate: 900  #per second
   error_deg: 1
+
+  zor: 1
+  zoo: 50
+  zoa: 500
 
 ZONE_MODES:
   SMALL:
@@ -68,4 +72,6 @@ ZONE_MODES:
 LOGGING:
   #ROBOT: '/home/user1/RoboTracker_HF/logs/robot/robot'
   #ROBOT: '/home/hf-robofish/Desktop/robot'
-  ROBOT: '/home/david/behavior_HF_dummy/logs/robot'
+  ROBOT: 'behavior_HF_dummy/logs/robot/robot'
+  INPUT: 'behavior_HF_dummy/logs/user_input/user_input'
+  FISH: 'behavior_HF_dummy/logs/fish/fish'

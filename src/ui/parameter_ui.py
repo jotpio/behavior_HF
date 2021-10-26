@@ -2,11 +2,17 @@ from PyQt5.QtWidgets import QVBoxLayout, QHBoxLayout, QPushButton, QLabel, QSpin
 from PyQt5.QtCore import Qt, pyqtSignal, QObject, QEvent
 from PyQt5.QtGui import QPen, QBrush, QColor, QPainter
 
+from src.util.util import Util
+
+import random
+
 
 class Parameter_UI(QVBoxLayout):
     def __init__(self, parent_behavior, RT_MODE, config):
         super().__init__()
+
         self.config = config
+        self.util = Util(self.config)
         self.RT_MODE = RT_MODE
         self.parent_behavior = parent_behavior
 
@@ -114,73 +120,73 @@ class Parameter_UI(QVBoxLayout):
         # connect
 
         self.random_target.clicked.connect(
-            self.parent_behavior.on_random_target_clicked, Qt.QueuedConnection
+            self.on_random_target_clicked, Qt.QueuedConnection
         )
         self.reset_button.clicked.connect(
-            self.parent_behavior.on_reset_button_clicked, Qt.QueuedConnection
+            self.on_reset_button_clicked, Qt.QueuedConnection
         )
         self.num_fish_spinbox.valueChanged.connect(
-            self.parent_behavior.on_num_fish_spinbox_valueChanged, Qt.QueuedConnection
+            self.on_num_fish_spinbox_valueChanged, Qt.QueuedConnection
         )
         if not self.RT_MODE:
             self.zoa_checkbox.toggled.connect(
-                self.parent_behavior.on_zone_checkbox_changed, Qt.QueuedConnection
+                self.on_zone_checkbox_changed, Qt.QueuedConnection
             )
             self.zoo_checkbox.toggled.connect(
-                self.parent_behavior.on_zone_checkbox_changed, Qt.QueuedConnection
+                self.on_zone_checkbox_changed, Qt.QueuedConnection
             )
             self.zor_checkbox.toggled.connect(
-                self.parent_behavior.on_zone_checkbox_changed, Qt.QueuedConnection
+                self.on_zone_checkbox_changed, Qt.QueuedConnection
             )
             self.vision_checkbox.toggled.connect(
-                self.parent_behavior.on_vision_checkbox_changed, Qt.QueuedConnection
+                self.on_vision_checkbox_changed, Qt.QueuedConnection
             )
             self.dark_mode_checkbox.toggled.connect(
-                self.parent_behavior.on_dark_mode_checkbox_changed, Qt.QueuedConnection
+                self.on_dark_mode_checkbox_changed, Qt.QueuedConnection
             )
 
         self.zor_spinbox.valueChanged.connect(
-            self.parent_behavior.on_zor_spinbox_valueChanged, Qt.QueuedConnection
+            self.on_zor_spinbox_valueChanged, Qt.QueuedConnection
         )
         self.zoo_spinbox.valueChanged.connect(
-            self.parent_behavior.on_zoo_spinbox_valueChanged, Qt.QueuedConnection
+            self.on_zoo_spinbox_valueChanged, Qt.QueuedConnection
         )
         self.zoa_spinbox.valueChanged.connect(
-            self.parent_behavior.on_zoa_spinbox_valueChanged, Qt.QueuedConnection
+            self.on_zoa_spinbox_valueChanged, Qt.QueuedConnection
         )
 
         self.auto_robot_checkbox.toggled.connect(
-                self.parent_behavior.on_auto_robot_checkbox_changed, Qt.QueuedConnection
+                self.on_auto_robot_checkbox_changed, Qt.QueuedConnection
         )
         self.next_robot_step.clicked.connect(
-            self.parent_behavior.on_next_robot_step_clicked, Qt.QueuedConnection
+            self.on_next_robot_step_clicked, Qt.QueuedConnection
         )
         self.flush_robot_button.clicked.connect(
-            self.parent_behavior.on_flush_robot_target_clicked, Qt.QueuedConnection
+            self.on_flush_robot_target_clicked, Qt.QueuedConnection
         )
 
         self.sel_target_pb.clicked.connect(
-            self.parent_behavior.on_sel_target_pb_clicked, Qt.QueuedConnection
+            self.on_sel_target_pb_clicked, Qt.QueuedConnection
         )
 
         self.turn_left_pb.pressed.connect(
-            self.parent_behavior.on_turn_left_pb_clicked, Qt.QueuedConnection
+            self.on_turn_left_pb_clicked, Qt.QueuedConnection
         )
 
         self.turn_right_pb.pressed.connect(
-            self.parent_behavior.on_turn_right_pb_clicked, Qt.QueuedConnection
+            self.on_turn_right_pb_clicked, Qt.QueuedConnection
         )
 
         self.turn_left_pb.released.connect(
-            self.parent_behavior.on_turn_left_pb_released, Qt.QueuedConnection
+            self.on_turn_left_pb_released, Qt.QueuedConnection
         )
 
         self.turn_right_pb.released.connect(
-            self.parent_behavior.on_turn_right_pb_released, Qt.QueuedConnection
+            self.on_turn_right_pb_released, Qt.QueuedConnection
         )
 
         self.sim_charge_pb.clicked.connect(
-            self.parent_behavior.on_sim_charge_pb_clicked, Qt.QueuedConnection
+            self.on_sim_charge_pb_clicked, Qt.QueuedConnection
         )
 
         # configure checkboxes
@@ -194,3 +200,112 @@ class Parameter_UI(QVBoxLayout):
         self.auto_robot_checkbox.setChecked(not self.config["ROBOT"]["controlled_from_start"])
         self.next_robot_step.setEnabled(not self.auto_robot_checkbox.isChecked())
         self.flush_robot_button.setEnabled(not self.auto_robot_checkbox.isChecked())
+
+    # region <UI slots>
+    def on_random_target_clicked(self):
+        self.parent_behavior.target = random.randint(10, 45), random.randint(10, 45)
+        if self.parent_behavior.debug_vis is not None:
+            self.parent_behavior.debug_vis.scene.addEllipse(
+                self.util.map_cm_to_px(self.target[0]),
+                self.util.map_cm_to_px(self.target[1]),
+                10,
+                10,
+            )
+        print(f"New target selected: {self.target[0]},{self.target[1]}")
+
+    def on_reset_button_clicked(self):
+        val = self.num_fish_spinbox.value()
+        self.parent_behavior.com_queue.put(("reset_fish", val))
+        print(f"Reseting positions of fish!")
+
+    def on_zone_checkbox_changed(self, bool):
+        if self.parent_behavior.debug_vis:
+            zones = [
+                self.zor_checkbox.isChecked(),
+                self.zoo_checkbox.isChecked(),
+                self.zoa_checkbox.isChecked(),
+            ]
+            self.parent_behavior.debug_vis.change_zones(zones)
+            self.parent_behavior.network_controller.update_ellipses.emit(
+                self.parent_behavior.behavior_robot, self.parent_behavior.allfish
+            )
+
+    def on_vision_checkbox_changed(self):
+        if self.parent_behavior.debug_vis:
+            self.parent_behavior.debug_vis.toggle_vision_cones(
+                self.vision_checkbox.isChecked()
+            )
+            self.parent_behavior.network_controller.update_ellipses.emit(
+                self.parent_behavior.behavior_robot, self.allfish
+            )
+
+    def on_num_fish_spinbox_valueChanged(self, val):
+        self.parent_behavior.com_queue.put(("reset_fish", val))
+        print(f"Setting number of fish to: {val}")
+
+    def on_zor_spinbox_valueChanged(self, val):
+        zone_dir = {"zor": val}
+        self.parent_behavior.change_zones(zone_dir)
+
+    def on_zoo_spinbox_valueChanged(self, val):
+        zone_dir = {"zoo": val}
+        self.parent_behavior.change_zones(zone_dir)
+
+    def on_zoa_spinbox_valueChanged(self, val):
+        zone_dir = {"zoa": val}
+        self.parent_behavior.change_zones(zone_dir)
+
+    def on_dark_mode_checkbox_changed(self):
+        if self.parent_behavior.debug_vis:
+            self.parent_behavior.debug_vis.toggle_dark_mode(
+                self.dark_mode_checkbox.isChecked()
+            )
+            self.parent_behavior.network_controller.update_ellipses.emit(
+                self.parent_behavior.behavior_robot, self.parent_behavior.allfish
+            )
+
+    # robot slots
+    def on_auto_robot_checkbox_changed(self, val):
+
+        self.parent_behavior.queue_command(["control_robot", not val])
+        self.next_robot_step.setEnabled(not val)
+        self.flush_robot_button.setEnabled(not val)
+
+    # if auto robot movement is disabled then the next automatic robot movement target can be triggered by this button or manually by the joystick movement
+    def on_next_robot_step_clicked(self):
+        self.parent_behavior.trigger_next_robot_step = True
+
+    def on_flush_robot_target_clicked(self):
+        self.parent_behavior.flush_robot_target = True
+
+    def on_sel_target_pb_clicked(self):
+        target_x = self.util.map_px_to_cm(self.target_x.value())
+        target_y = self.util.map_px_to_cm(self.target_y.value())
+        self.parent_behavior.target = target_x, target_y
+        if self.parent_behavior.debug_vis is not None:
+            self.parent_behavior.debug_vis.scene.addEllipse(
+                self.util.map_cm_to_px(self.parent_behavior.target[0]),
+                self.util.map_cm_to_px(self.parent_behavior.target[1]),
+                10,
+                10,
+            )
+        print(f"New target selected: {self.parent_behavior.target[0]},{self.parent_behavior.target[1]}")
+
+    def on_turn_right_pb_clicked(self):
+        self.parent_behavior.turn_right = True
+
+    def on_turn_left_pb_clicked(self):
+        self.parent_behavior.turn_left = True
+
+    def on_turn_left_pb_released(self):
+        self.parent_behavior.turn_left = False
+
+    def on_turn_right_pb_released(self):
+        self.parent_behavior.turn_right = False
+
+    def on_sim_charge_pb_clicked(self):
+        print("BUTTON: Go to charging station")
+        self.parent_behavior.behavior_robot.go_to_charging_station = True
+
+    # endregion
+

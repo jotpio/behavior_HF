@@ -7,11 +7,15 @@ from collections import deque
 from PyQt5.QtCore import *
 import logging
 from logging.handlers import TimedRotatingFileHandler
+from pathlib import Path
+from src.util.util import Util
 
 
 class Robot(Agent):
     def __init__(self, arena, config):
         super().__init__(0, [1000, 1000], 90, arena, config)
+
+        self.util = Util(self.config)
 
         self.controlled = config["ROBOT"]["controlled_from_start"]
         self.debug = False
@@ -27,28 +31,54 @@ class Robot(Agent):
         self.target_px = [0, 0]
         self.charging = False
         self.go_to_charging_station = False
-        self.fullCharge = False
+        self.full_charge = False
         self.user_controlled = False
         self.arena_repulsion = self.config["ROBOT"]["arena_repulsion"]
 
         self.min_voltage = self.config["ROBOT"]["min_voltage"]
         self.max_voltage = self.config["ROBOT"]["max_voltage"]
 
+        # zone radii
+        self.zor = config["ROBOT"]["zor"]
+        self.zoo = config["ROBOT"]["zoo"]
+        self.zoa = config["ROBOT"]["zoa"]
+
         self.max_turn_rate = self.config["ROBOT"]["max_turn_rate"]
         self.error_deg = self.config["ROBOT"]["error_deg"]
 
+        self.setup_logging()
+
+    def setup_logging(self):
+        now = datetime.now()
         formatter = logging.Formatter("%(asctime)s -8s %(message)s")
 
         self.logger = logging.getLogger("robot_logger")
         handler = TimedRotatingFileHandler(
-            self.config["LOGGING"]["ROBOT"], when="H", interval=1
+            Path.home() / self.config["LOGGING"]["ROBOT"], when="H", interval=1
         )
         handler.setFormatter(formatter)
         # handler.setLevel(logging.CRITICAL)
         self.logger.addHandler(handler)
+        
         self.logcounter = 0
 
-        self.logger.warning(f"Started a new robot: {datetime.now()}")
+        self.logger.warning(f"Started a new robot: {now}")
+
+    def set_attributes(self, robot):
+        pos_cm = robot.position
+        pos_px = self.util.map_cm_to_px(pos_cm)
+        self.pos = np.asarray([pos_px[0], pos_px[1]])
+
+        dir = robot.orientation
+        self.dir = np.asarray([dir[0], dir[1]])
+        self.dir_norm = normalize(self.dir)
+        self.ori = math.degrees(math.atan2(dir[1], dir[0]))
+        self.set_voltage(robot.voltage)
+        self.set_charging(robot.chargingStatus)
+        print(
+            f"ROBOT: voltage: {self.voltage}, pos: {pos_px}, charging status: {self.charging}"
+        )
+
 
     def tick(self, fishpos, fishdir, dists):
         try:
@@ -186,7 +216,7 @@ class Robot(Agent):
         voltage_list_min = list(self.old_voltages_minute_queue)
         voltage_list_sec = list(self.old_voltages_second_queue)
 
-        print(f"ROBOT minute voltage list: {voltage_list_min}")
+        # print(f"ROBOT minute voltage list: {voltage_list_min}")
         # print(f"ROBOT second voltage list: {voltage_list_sec}")
 
         # check if voltage x minutes ago the same as current or voltage larger than 8.1
@@ -194,7 +224,7 @@ class Robot(Agent):
             voltage_list_min[0] == self.voltage and len(voltage_list_min) == 10
          and self.voltage > 7.8) or self.voltage > 8.05:
             print("Robot is fully charged")
-            self.fullCharge = True
+            self.full_charge = True
 
         # also check if mean gradient of voltage list is close to 0
         gradient = (
@@ -213,6 +243,7 @@ class Robot(Agent):
             if self.voltage < self.min_voltage and not self.charging:
                 print("ROBOT: LOW CHARGE")
                 self.go_to_charging_station = True
+                self.full_charge = False
         except:
             print("ROBOT: Error in check_if_low_charge!")
 

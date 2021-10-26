@@ -1,17 +1,12 @@
 from logging import debug
-import random
-import time
-import math
-import threading
+import random, time, math, threading, queue, os, sys, logging
 import numpy as np
 import yaml  # pyyaml
-import queue
 from pathlib import Path
-import sys
-import os
 from scipy.spatial import distance_matrix
 from collections.abc import Iterable
-
+from logging.handlers import TimedRotatingFileHandler
+from datetime import datetime
 
 path_root = Path(__file__).parents[1]
 sys.path.append(str(path_root))
@@ -33,14 +28,14 @@ from src.models.agent import (
 from src.util.util import Util
 from src.util.heartbeat import HeartbeatTimer
 
+from src.util.serialize import serialize
+from src.models.charging import *
+
+
 from PyQt5.sip import wrapinstance as wrapInstance
 
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import Qt, pyqtSignal, QObject, QEvent, QTimer
-
-# from PyQt5.QtWidgets import QLayout, QVBoxLayout, QPushButton
-
-# from PyQt5.QtGui import QPen, QBrush, QColor, QPainter
 
 try:
     from robotracker import (
@@ -63,8 +58,6 @@ class Behavior(QObject):
     def __init__(self, layout=None, DEBUG_VIS=None, config=None):
         super().__init__()
 
-        # self.initiate_numba()
-
         self.robot = None
         self.world = None
         self.target = None
@@ -78,8 +71,6 @@ class Behavior(QObject):
 
         self.util = Util(self.config)
         self.debug_vis = DEBUG_VIS
-        # if DEBUG_VIS is None:
-        #     self.debug_vis = DebugVisualization(self.config, RT_MODE)
 
         self.default_num_fish = self.config["DEFAULTS"]["number_of_fish"]
         self.optimisation = self.config["DEBUG"]["optimisation"]
@@ -100,6 +91,10 @@ class Behavior(QObject):
         self.heartbeat_thread = threading.Thread(target=self.heartbeat_obj.run_thread)
         self.heartbeat_thread.daemon = True
         self.heartbeat_thread.start()
+
+        # logging
+        self.setup_logging()
+
         # arena
         self.arena = Arena(
             [0, 0], self.config["ARENA"]["width"], self.config["ARENA"]["height"]
@@ -139,6 +134,8 @@ class Behavior(QObject):
         self.exec_time = 0
         self.exec_stepper = 0
 
+
+        # setup command queue
         self.com_queue = queue.LifoQueue()
 
         # setup debug vis
@@ -175,6 +172,20 @@ class Behavior(QObject):
         )
         normalize(np.asarray([1.4, 2.0]))
 
+    def setup_logging(self):
+        now = datetime.now()
+        formatter = logging.Formatter("%(asctime)s -8s %(message)s")
+        self.fish_logger = logging.getLogger("fish_logger")
+        fish_handler = TimedRotatingFileHandler(
+            Path.home() / self.config["LOGGING"]["FISH"], when="H", interval=1
+        )
+        fish_handler.setFormatter(formatter)
+        # handler.setLevel(logging.CRITICAL)
+        self.fish_logger.addHandler(fish_handler)
+        self.fish_logger.warning(f"Started a new behavior: {now}")
+
+        self.logcounter = 0
+
     def setup_parameter_layout(self):
         print("Behavior: Setting up parameter layout")
         self.app = QApplication(sys.argv)
@@ -201,151 +212,6 @@ class Behavior(QObject):
         self.parameter_ui = Parameter_UI(self, RT_MODE, self.config)
         #
         self.parent_layout.addLayout(self.parameter_ui)
-
-    def on_random_target_clicked(self):
-        self.target = random.randint(10, 45), random.randint(10, 45)
-        if self.debug_vis is not None:
-            self.debug_vis.scene.addEllipse(self.target[0], self.target[0], 10, 10)
-        print(f"New target selected: {self.target[0]},{self.target[1]}")
-
-    def on_reset_button_clicked(self):
-        val = self.parameter_ui.num_fish_spinbox.value()
-        self.com_queue.put(("reset_fish", val))
-        print(f"Reseting positions of fish!")
-
-    def on_zone_checkbox_changed(self, bool):
-        if self.debug_vis:
-            zones = [
-                self.parameter_ui.zor_checkbox.isChecked(),
-                self.parameter_ui.zoo_checkbox.isChecked(),
-                self.parameter_ui.zoa_checkbox.isChecked(),
-            ]
-            self.debug_vis.change_zones(zones)
-            self.network_controller.update_ellipses.emit(
-                self.behavior_robot, self.allfish
-            )
-
-    def on_vision_checkbox_changed(self):
-        if self.debug_vis:
-            self.debug_vis.toggle_vision_cones(
-                self.parameter_ui.vision_checkbox.isChecked()
-            )
-            self.network_controller.update_ellipses.emit(
-                self.behavior_robot, self.allfish
-            )
-
-    def on_num_fish_spinbox_valueChanged(self, val):
-        self.com_queue.put(("reset_fish", val))
-        print(f"Setting number of fish to: {val}")
-
-    def on_zor_spinbox_valueChanged(self, val):
-        zone_dir = {"zor": val}
-        self.change_zones(zone_dir)
-
-    def on_zoo_spinbox_valueChanged(self, val):
-        zone_dir = {"zoo": val}
-        self.change_zones(zone_dir)
-
-    def on_zoa_spinbox_valueChanged(self, val):
-        zone_dir = {"zoa": val}
-        self.change_zones(zone_dir)
-
-    def on_dark_mode_checkbox_changed(self):
-        if self.debug_vis:
-            self.debug_vis.toggle_dark_mode(
-                self.parameter_ui.dark_mode_checkbox.isChecked()
-            )
-            self.network_controller.update_ellipses.emit(
-                self.behavior_robot, self.allfish
-            )
-
-    # robot slots
-    def on_auto_robot_checkbox_changed(self, val):
-        self.behavior_robot.controlled = not val
-        self.parameter_ui.next_robot_step.setEnabled(not val)
-        self.parameter_ui.flush_robot_button.setEnabled(not val)
-
-    # if auto robot movement is disabled then the next automatic robot movement target can be triggered by this button or manually by the joystick movement
-    def on_next_robot_step_clicked(self):
-        self.trigger_next_robot_step = True
-
-    def on_flush_robot_target_clicked(self):
-        self.flush_robot_target = True
-
-    def on_sel_target_pb_clicked(self):
-        target_x = self.util.map_px_to_cm(self.parameter_ui.target_x.value())
-        target_y = self.util.map_px_to_cm(self.parameter_ui.target_y.value())
-        self.target = target_x, target_y
-        if self.debug_vis is not None:
-            self.debug_vis.scene.addEllipse(
-                self.util.map_cm_to_px(self.target[0]),
-                self.util.map_cm_to_px(self.target[1]),
-                10,
-                10,
-            )
-        print(f"New target selected: {self.target[0]},{self.target[1]}")
-
-    def on_turn_right_pb_clicked(self):
-        self.turn_right = True
-
-    def on_turn_left_pb_clicked(self):
-        self.turn_left = True
-
-    def on_turn_left_pb_released(self):
-        self.turn_left = False
-
-    def on_turn_right_pb_released(self):
-        self.turn_right = False
-
-    def on_sim_charge_pb_clicked(self):
-        self.go_to_charging_station = True
-
-    def eventFilter(self, obj, event) -> bool:
-        if event.type() == QEvent.KeyPress and obj is self.debug_vis.viz_window:
-            key = event.key()
-            # new_dir = np.asarray([0,0])
-            if key == Qt.Key_W:
-                self.behavior_robot.debug = True
-                self.behavior_robot.controlled = True
-                self.network_controller.joystick_server.debug = True
-                # new_dir += np.asarray([0,-1])
-                self.movelist.append([0, -1])
-                # print("W")
-            if key == Qt.Key_A:
-                self.behavior_robot.debug = True
-                self.behavior_robot.controlled = True
-                self.network_controller.joystick_server.debug = True
-                # new_dir += np.asarray([-1,0])
-                self.movelist.append([-1, 0])
-                # print("A")
-            if key == Qt.Key_S:
-                self.behavior_robot.debug = True
-                self.behavior_robot.controlled = True
-                self.network_controller.joystick_server.debug = True
-                # new_dir += np.asarray([0,1])
-                self.movelist.append([0, 1])
-                # print("S")
-            if key == Qt.Key_D:
-                self.behavior_robot.debug = True
-                self.behavior_robot.controlled = True
-                self.network_controller.joystick_server.debug = True
-                # new_dir += np.asarray([1,0])
-                self.movelist.append([1, 0])
-                # print("D")
-            # new_dir = new_dir / np.linalg.norm(new_dir) if np.linalg.norm(new_dir) != 0 else np.asarray([0,0])
-            # self.com_queue.put(("change_robodir", new_dir))
-            # print(new_dir)
-            return True
-        elif event.type() == QEvent.KeyRelease and obj is self.debug_vis.viz_window:
-            self.behavior_robot.debug = False
-            self.behavior_robot.controlled = self.controlled
-            self.network_controller.joystick_server.debug = False
-            return True
-
-        elif event.type() == QEvent.Wheel and obj is self.debug_vis.viz_window:
-            self.debug_vis.wheelEvent(event)
-
-        return False
 
     def supported_timesteps(self):
         print("Behavior: supported_timesteps called")
@@ -412,7 +278,15 @@ class Behavior(QObject):
             f.move()
 
         # Update fish in tracking view and send positions
-        self.network_controller.update_positions.emit(self.serialize())
+        serialized = serialize(self.behavior_robot, self.allfish)
+        self.network_controller.update_positions.emit(serialized)
+
+        
+        # log direction every few ticks
+        if self.logcounter == 5 and self.behavior_robot.user_controlled:
+            self.fish_logger.warning(f"{serialized}")
+            self.logcounter = 0
+        self.logcounter += 1
 
         if self.optimisation:
             end_time = time.time()
