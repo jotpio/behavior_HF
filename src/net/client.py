@@ -2,6 +2,10 @@ import time
 from socket import *
 import json
 from PyQt5.QtCore import Qt, pyqtSignal, QObject
+import logging
+
+FORMAT = "\t%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+logging.basicConfig(format=FORMAT, level=logging.DEBUG)
 
 
 class ClientSenderThread(QObject):
@@ -47,7 +51,7 @@ class ClientSenderThread(QObject):
                     break
 
     def print(self, message):
-        print(f"\t{self.type.upper()}: {message}", flush=True)
+        logging.info(f"\t{self.type.upper()}: {message}")
 
     def connect_socket(self):
         try:

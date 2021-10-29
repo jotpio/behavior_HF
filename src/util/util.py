@@ -1,4 +1,8 @@
 import numpy as np
+import logging
+
+FORMAT = "\t%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+logging.basicConfig(format=FORMAT, level=logging.DEBUG)
 
 
 class Util:
@@ -21,7 +25,7 @@ class Util:
         try:
             return np.asarray(v) * self.world_to_arena_ratio
         except:
-            print(f"UTIL: Error in mapping cm to px")
+            logging.error(f"UTIL: Error in mapping cm to px")
         # try:
         #     return self.cm_to_px_mapper(v)
         # except:
@@ -33,7 +37,7 @@ class Util:
         try:
             return np.asarray(v) * self.arena_to_world_ratio
         except:
-            print(f"UTIL: Error in mapping px to cm")
+            logging.error(f"UTIL: Error in mapping px to cm")
 
         # try:
         #     return self.px_to_cm_mapper(v)

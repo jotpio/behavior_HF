@@ -15,7 +15,6 @@ from collections.abc import Iterable
 
 path_root = Path(__file__).parents[1]
 sys.path.append(str(path_root))
-# print(sys.path)
 
 from src.net.network_controller import NetworkController
 from src.ui.parameter_ui import Parameter_UI
@@ -38,6 +37,12 @@ from PyQt5.sip import wrapinstance as wrapInstance
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import Qt, pyqtSignal, QObject, QEvent, QTimer
 
+import logging
+
+FORMAT = "\t%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+logging.basicConfig(format=FORMAT, level=logging.INFO)
+numba_logger = logging.getLogger("numba")
+numba_logger.setLevel(logging.WARNING)
 # from PyQt5.QtWidgets import QLayout, QVBoxLayout, QPushButton
 
 # from PyQt5.QtGui import QPen, QBrush, QColor, QPainter
@@ -51,8 +56,8 @@ try:
     )
 
     RT_MODE = True
-except:
-    print("No RoboTracker found!")
+except Exception as e:
+    logging.exception("No RoboTracker found!")
     RT_MODE = False
 
 np.warnings.filterwarnings("error", category=np.VisibleDeprecationWarning)
@@ -73,7 +78,7 @@ class Behavior(QObject):
         self.config = config
         if self.config is None:
             path = (Path(__file__).parents[1]) / "cfg/config.yml"
-            print(f"Behavior: config path: {path}")
+            logging.info(f"BEHAVIOR: config path: {path}")
             self.config = yaml.safe_load(open(path))
 
         self.util = Util(self.config)
@@ -121,7 +126,9 @@ class Behavior(QObject):
             try:
                 self.parent_layout = wrapInstance(layout, QLayout)
             except:
-                print(f"Behavior: Error with layout wrapping. Creating own one...")
+                logging.error(
+                    f"Behavior: Error with layout wrapping. Creating own one..."
+                )
                 self.parent_layout = (
                     layout
                     if self.debug_vis is not None
@@ -151,7 +158,7 @@ class Behavior(QObject):
             app.installEventFilter(self)
         self.movelist = []
 
-        print("Behavior: Initialized!")
+        logging.info("Behavior: Initialized!")
 
     def initiate_numba(self):
         repulse(np.asarray([[0.0, 0.0]]), np.asarray([0, 0]))
@@ -176,7 +183,7 @@ class Behavior(QObject):
         normalize(np.asarray([1.4, 2.0]))
 
     def setup_parameter_layout(self):
-        print("Behavior: Setting up parameter layout")
+        logging.info("Behavior: Setting up parameter layout")
         self.app = QApplication(sys.argv)
         layout = QVBoxLayout()
 
@@ -197,7 +204,7 @@ class Behavior(QObject):
         self.debug_vis.setArena(self.arena)
 
     def setup_parameter_ui(self):
-        print("Behavior: Setting up parameter ui")
+        logging.info("Behavior: Setting up parameter ui")
         self.parameter_ui = Parameter_UI(self, RT_MODE, self.config)
         #
         self.parent_layout.addLayout(self.parameter_ui)
@@ -206,12 +213,12 @@ class Behavior(QObject):
         self.target = random.randint(10, 45), random.randint(10, 45)
         if self.debug_vis is not None:
             self.debug_vis.scene.addEllipse(self.target[0], self.target[0], 10, 10)
-        print(f"New target selected: {self.target[0]},{self.target[1]}")
+        logging.info(f"New target selected: {self.target[0]},{self.target[1]}")
 
     def on_reset_button_clicked(self):
         val = self.parameter_ui.num_fish_spinbox.value()
         self.com_queue.put(("reset_fish", val))
-        print(f"Reseting positions of fish!")
+        logging.info(f"Reseting positions of fish!")
 
     def on_zone_checkbox_changed(self, bool):
         if self.debug_vis:
@@ -236,7 +243,7 @@ class Behavior(QObject):
 
     def on_num_fish_spinbox_valueChanged(self, val):
         self.com_queue.put(("reset_fish", val))
-        print(f"Setting number of fish to: {val}")
+        logging.info(f"Setting number of fish to: {val}")
 
     def on_zor_spinbox_valueChanged(self, val):
         zone_dir = {"zor": val}
@@ -283,7 +290,7 @@ class Behavior(QObject):
                 10,
                 10,
             )
-        print(f"New target selected: {self.target[0]},{self.target[1]}")
+        logging.info(f"New target selected: {self.target[0]},{self.target[1]}")
 
     def on_turn_right_pb_clicked(self):
         self.turn_right = True
@@ -310,31 +317,26 @@ class Behavior(QObject):
                 self.network_controller.joystick_server.debug = True
                 # new_dir += np.asarray([0,-1])
                 self.movelist.append([0, -1])
-                # print("W")
             if key == Qt.Key_A:
                 self.behavior_robot.debug = True
                 self.behavior_robot.controlled = True
                 self.network_controller.joystick_server.debug = True
                 # new_dir += np.asarray([-1,0])
                 self.movelist.append([-1, 0])
-                # print("A")
             if key == Qt.Key_S:
                 self.behavior_robot.debug = True
                 self.behavior_robot.controlled = True
                 self.network_controller.joystick_server.debug = True
                 # new_dir += np.asarray([0,1])
                 self.movelist.append([0, 1])
-                # print("S")
             if key == Qt.Key_D:
                 self.behavior_robot.debug = True
                 self.behavior_robot.controlled = True
                 self.network_controller.joystick_server.debug = True
                 # new_dir += np.asarray([1,0])
                 self.movelist.append([1, 0])
-                # print("D")
             # new_dir = new_dir / np.linalg.norm(new_dir) if np.linalg.norm(new_dir) != 0 else np.asarray([0,0])
             # self.com_queue.put(("change_robodir", new_dir))
-            # print(new_dir)
             return True
         elif event.type() == QEvent.KeyRelease and obj is self.debug_vis.viz_window:
             self.behavior_robot.debug = False
@@ -348,17 +350,17 @@ class Behavior(QObject):
         return False
 
     def supported_timesteps(self):
-        print("Behavior: supported_timesteps called")
+        logging.info("Behavior: supported_timesteps called")
         return []
 
     def activate(self, robot, world):
-        print("Behavior: Activated")
+        logging.info("Behavior: Activated")
         self.robot = robot
         self.behavior_robot.set_robot(robot)
         self.world = world
 
     def deactivate(self):
-        print("Behavior: Deactivated")
+        logging.info("Behavior: Deactivated")
         self.robot = None
         self.behavior_robot.set_robot(None)
         self.world = None
@@ -384,13 +386,15 @@ class Behavior(QObject):
         while not (self.com_queue.empty()):
             command = self.com_queue.get()
             if self.config["DEBUG"]["console"]:
-                print(command)
+                logging.info(command)
             try:
                 func = getattr(self, command[0])
                 args = command[1:]
                 func(*args)
             except:
-                print(f"Command not found or error in command execution! {command}")
+                logging.info(
+                    f"Command not found or error in command execution! {command}"
+                )
 
         # TICK - update all fish one time step forward (tick)
         all_agents = [self.behavior_robot]
@@ -424,7 +428,7 @@ class Behavior(QObject):
             self.exec_stepper += 1
             self.exec_time += exec_time
             mean_exec_time = self.exec_time / self.exec_stepper
-            print(
+            logging.info(
                 f"mean tick takes {mean_exec_time} seconds; last tick took {exec_time} seconds"
             )
 
@@ -472,7 +476,6 @@ class Behavior(QObject):
 
     def queue_command(self, command):
         self.com_queue.put((command[0], command[1]))
-        # print("New command queued!")
 
     #
     # Commands
@@ -504,7 +507,7 @@ class Behavior(QObject):
             if self.allfish[0].id == 1:
                 self.allfish[0].pos = np.asarray([1500, 500])
             else:
-                print("BEHAVIOR: Fish with id 1 not existing!")
+                logging.error("BEHAVIOR: Fish with id 1 not existing!")
 
         self.network_controller.update_ellipses.emit(self.behavior_robot, self.allfish)
 

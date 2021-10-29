@@ -2,6 +2,10 @@ from socket import *
 import json
 import time
 from PyQt5.QtCore import Qt, pyqtSignal, QObject
+import logging
+
+FORMAT = "\t%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+logging.basicConfig(format=FORMAT, level=logging.DEBUG)
 
 
 class ServerListenerThread(QObject):
@@ -92,7 +96,7 @@ class ServerListenerThread(QObject):
         return True
 
     def print(self, message):
-        print(f"\t{self.type.upper()}: {message}", flush=True)
+        logging.info(f"\t{self.type.upper()}: {message}")
 
     # Deleting (Calling destructor)
     def __del__(self):

@@ -64,5 +64,5 @@ ZONE_MODES:
     zoa: 220
 
 LOGGING:
-  #ROBOT: '/home/user1/RoboTracker_HF/logs/robot/robot'
-  ROBOT: '/home/hf-robofish/Desktop/robot'
+  ROBOT: '/home/user1/RoboTracker_HF/logs/robot/robot'
+  #ROBOT: '/home/hf-robofish/Desktop/robot'

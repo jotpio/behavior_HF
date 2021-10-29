@@ -45,6 +45,7 @@ class Robot(Agent):
         handler.setFormatter(formatter)
         # handler.setLevel(logging.CRITICAL)
         self.logger.addHandler(handler)
+        self.logger.propagate = False
         self.logcounter = 0
 
         self.logger.warning(f"Started a new robot: {datetime.now()}")
@@ -72,9 +73,9 @@ class Robot(Agent):
                 new_pos = self.pos + (self.new_dir * self.max_speed)
                 # set next target in pixel coordinates
                 self.target_px = self.pos + (self.new_dir * 100)
-                print(
-                    f"ROBOT: new px target: {self.target_px} check if outside of arena!!!!"
-                )
+                # print(
+                #   f"ROBOT: new px target: {self.target_px} check if outside of arena!!!!"
+                # )
                 # check if next target would be outside arena and update new_dir if its not
                 inside = self.check_inside_arena(self.target_px)
                 if not inside:
@@ -100,7 +101,6 @@ class Robot(Agent):
                     self.logger.warning(f"{self.pos}, {self.dir}")
                     self.logcounter = 0
                 self.logcounter += 1
-
 
             # automatic movement if not in charging or controlled state
             else:
@@ -243,7 +243,7 @@ class Robot(Agent):
             id_closest_arena_p = np.argmin(self.arena_points[:, 1])
             # self.pos = self.arena_points[id_closest_arena_p][0]
             print(id_closest_arena_p)
-            
+
             # set new dir toward the middle, away from wall
             # top edge
             if id_closest_arena_p == 0:
@@ -258,4 +258,3 @@ class Robot(Agent):
             elif id_closest_arena_p == 3:
                 self.new_dir = np.asarray([1.0, 0.0])  # go right
             return False
-

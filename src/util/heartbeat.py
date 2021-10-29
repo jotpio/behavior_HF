@@ -1,6 +1,10 @@
 import os
 from PyQt5.QtCore import QThread
 import time
+import logging
+
+FORMAT = "\t%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+logging.basicConfig(format=FORMAT, level=logging.DEBUG)
 
 
 class HeartbeatTimer(QThread):
@@ -22,4 +26,4 @@ class HeartbeatTimer(QThread):
             if not os.path.isfile(heartbeat_path):
                 os.mknod(heartbeat_path)
         except:
-            print("TIMER: Error in heartbeat!")
+            logging.error("TIMER: Error in heartbeat!")
