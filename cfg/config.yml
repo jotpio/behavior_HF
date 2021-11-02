@@ -17,7 +17,7 @@ DEFAULTS:
   follow_angle: 90
 
   error_deg: 10
-  max_speed: 7
+  max_speed: 8
   max_turn_rate: 200  #per second
 
   time_step: 0.05 #0.05 = 20fps
@@ -37,6 +37,8 @@ NETWORK:
   command_port: 13001
   joystick_port: 13002
   charge_port: 13006
+  robot_command_port: 13333
+  robot_attribute_port: 13334
 
 CHARGER:
   #position: [94, 1820]

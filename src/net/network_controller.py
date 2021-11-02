@@ -1,10 +1,10 @@
 import threading
 from PyQt5.QtCore import Qt, pyqtSignal, QObject
-
 from src.net.position_client import PositionClient
 from src.net.command_listener_server import CommandListenerServer
 from src.net.joystick_server import JoystickServer
 from src.net.charge_client import ChargeClient
+from src.net.robot_command_client import RobotCommandClient
 
 from src.models.robot import Robot
 
@@ -13,7 +13,8 @@ class NetworkController(QObject):
 
     update_positions = pyqtSignal(list, name="update_positions")
     update_ellipses = pyqtSignal(Robot, list, name="update_ellipses")
-    charge_command = pyqtSignal(dict, name="update_ellipses")
+    charge_command = pyqtSignal(dict, name="charge_command")
+    robot_command = pyqtSignal(dict, name="robot_command")
 
     def __init__(self, parent, config):
         super().__init__()
@@ -25,6 +26,7 @@ class NetworkController(QObject):
         self.command_server = CommandListenerServer(self.behavior, self.config)
         self.joystick_server = JoystickServer(self.behavior, self.config)
         self.charge_client = ChargeClient(self.behavior, self.config)
+        self.robot_command_client = RobotCommandClient(self.behavior, self.config)
 
         # setup threads
         self.p_thread = threading.Thread(target=self.pos_client.run_thread)
@@ -43,9 +45,16 @@ class NetworkController(QObject):
         self.ch_thread.daemon = True
         self.ch_thread.start()
 
+        self.rc_thread = threading.Thread(target=self.robot_command_client.run_thread)
+        self.rc_thread.daemon = True
+        self.rc_thread.start()
+
         self.update_positions.connect(self.pos_client.send_pos, Qt.QueuedConnection)
         self.charge_command.connect(
             self.charge_client.send_command, Qt.QueuedConnection
+        )
+        self.robot_command.connect(
+            self.robot_command_client.send_robot_command, Qt.QueuedConnection
         )
 
     def exit(self):
@@ -53,3 +62,4 @@ class NetworkController(QObject):
         self.c_thread.join()
         self.j_thread.join()
         self.ch_thread.join()
+        self.rc_thread.join()

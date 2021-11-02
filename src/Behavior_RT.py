@@ -10,7 +10,7 @@ from datetime import datetime
 
 path_root = Path(__file__).parents[1]
 sys.path.append(str(path_root))
-# print(sys.path)
+# logging.error(sys.path)
 
 from src.ui.debug_visualization import DebugVisualization
 from src.net.network_controller import NetworkController
@@ -57,7 +57,7 @@ try:
 
     RT_MODE = True
 except:
-    print("No RoboTracker found!")
+    logging.error("No RoboTracker found!")
     RT_MODE = False
 
 np.warnings.filterwarnings("error", category=np.VisibleDeprecationWarning)
@@ -75,7 +75,7 @@ class Behavior(PythonBehavior):
         self.config = config
         if self.config is None:
             path = (Path(__file__).parents[1]) / "cfg/config.yml"
-            print(f"Behavior: config path: {path}")
+            logging.info(f"Behavior: config path: {path}")
             self.config = yaml.safe_load(open(path))
 
         # setup logging
@@ -160,7 +160,9 @@ class Behavior(PythonBehavior):
             try:
                 self.parent_layout = wrapInstance(layout, QLayout)
             except:
-                print(f"Behavior: Error with layout wrapping. Creating own one...")
+                logging.error(
+                    f"Behavior: Error with layout wrapping. Creating own one..."
+                )
                 self.parent_layout = (
                     layout
                     if self.debug_vis is not None
@@ -190,7 +192,7 @@ class Behavior(PythonBehavior):
         self.turn_left = False
         self.turn_right = False
 
-        print("Behavior: Initialized!")
+        logging.info("Behavior: Initialized!")
 
     def initiate_numba(self):
         repulse(np.asarray([[0.0, 0.0]]), np.asarray([0, 0]))
@@ -230,7 +232,7 @@ class Behavior(PythonBehavior):
         self.logcounter = 0
 
     def setup_parameter_layout(self):
-        print("Behavior: Setting up parameter layout")
+        logging.info("Behavior: Setting up parameter layout")
         self.app = QApplication(sys.argv)
         layout = QVBoxLayout()
 
@@ -251,24 +253,24 @@ class Behavior(PythonBehavior):
         self.debug_vis.setArena(self.arena)
 
     def setup_parameter_ui(self):
-        print("Behavior: Setting up parameter ui")
+        logging.info("Behavior: Setting up parameter ui")
         self.parameter_ui = Parameter_UI(self, RT_MODE, self.config)
         #
         self.parent_layout.addLayout(self.parameter_ui)
 
     def supported_timesteps(self):
-        print("Behavior: supported_timesteps called")
+        logging.info("Behavior: supported_timesteps called")
         return []
 
     def activate(self, robot, world):
-        print("Behavior: Activated")
+        logging.info("Behavior: Activated")
         self.robot = robot
         self.behavior_robot.set_robot(robot)
         self.world = world
         self.just_started = True
 
     def deactivate(self):
-        print("Behavior: Deactivated")
+        logging.info("Behavior: Deactivated")
         self.robot = None
         self.behavior_robot.set_robot(None)
         self.world = None
@@ -303,10 +305,10 @@ class Behavior(PythonBehavior):
                     if diff[0] < 100 and diff[1] < 100:
                         self.just_started = False
                     else:
-                        print(f"\nBEHAVIOR: In robot starting routine!!!!\n")
+                        logging.info(f"\nBEHAVIOR: In robot starting routine!!!!\n")
         except Exception as e:
-            print(f"\nBEHAVIOR: Error in start movement")
-            print(e)
+            logging.error(f"\nBEHAVIOR: Error in start movement")
+            logging.error(e)
 
         try:
             if self.optimisation:
@@ -317,17 +319,17 @@ class Behavior(PythonBehavior):
                 while not (self.com_queue.empty()):
                     command = self.com_queue.get()
                     if self.config["DEBUG"]["console"]:
-                        print(command)
+                        logging.info(command)
                     try:
                         func = getattr(self, command[0])
                         args = command[1:]
                         func(*args)
                     except:
-                        print(
+                        logging.error(
                             f"Command not found or error in command execution! {command}"
                         )
             except:
-                print(f"\nBEHAVIOR: Error in command queue")
+                logging.error(f"\nBEHAVIOR: Error in command queue")
 
             # update behavior robot position, voltage, dir and ori if RT loaded
             try:
@@ -335,7 +337,7 @@ class Behavior(PythonBehavior):
                     robots = [r for r in robots if r.uid == self.robot.uid]
                     self.behavior_robot.set_attributes(robots[0])
             except:
-                print(f"\nBEHAVIOR: Error in robot update")
+                logging.error(f"\nBEHAVIOR: Error in robot update")
 
             try:
                 # check for flush robot target triggered
@@ -367,7 +369,7 @@ class Behavior(PythonBehavior):
 
                     # robot control buttons
                     if self.target is not None:
-                        print(f"Set target to {self.target}")
+                        logging.info(f"Set target to {self.target}")
                         target = self.target
                         self.target = None
                         if not self.action:
@@ -387,8 +389,10 @@ class Behavior(PythonBehavior):
                             RobotActionDirect(self.robot.uid, 0, 5.0, 0.0),
                         ]
             except Exception as e:
-                print(f"\nBEHAVIOR: Error in robot priority actions/ charging behavior")
-                print(e)
+                logging.error(
+                    f"\nBEHAVIOR: Error in robot priority actions/ charging behavior"
+                )
+                logging.error(e)
 
             # TICK - update all fish one time step forward (tick)
             try:
@@ -408,7 +412,7 @@ class Behavior(PythonBehavior):
                         robot_dir = all_dir[0]
                         f.check_following(robot_pos, robot_dir)
             except:
-                print(f"\nBEHAVIOR: Error in tick")
+                logging.error(f"\nBEHAVIOR: Error in tick")
 
             # MOVE - move everything by new updated direction and speed
             try:
@@ -416,13 +420,14 @@ class Behavior(PythonBehavior):
                     for f in all_agents:
                         f.move()
                 except:
-                    print(f"\nBEHAVIOR: Error in all agents move")
+                    logging.error(f"\nBEHAVIOR: Error in all agents move")
 
                 if (
                     not self.behavior_robot.charging
                     and not self.behavior_robot.go_to_charging_station
                 ):
                     if RT_MODE:
+                        # automatic movement
                         if not self.behavior_robot.controlled:
                             try:
 
@@ -430,7 +435,7 @@ class Behavior(PythonBehavior):
                                 target = self.util.map_px_to_cm(
                                     self.behavior_robot.target_px
                                 )
-                                # print(f"ROBOT: new cm target: {target}")
+                                # logging.info(f"ROBOT: new cm target: {target}")
 
                                 if not self.action:
                                     self.action = [
@@ -440,17 +445,17 @@ class Behavior(PythonBehavior):
                                         ),
                                     ]
                             except:
-                                print(
+                                logging.error(
                                     f"nBEHAVIOR: Error in move - automatic robot movement"
                                 )
-
+                        # next step clicked
                         elif self.trigger_next_robot_step:
                             try:
                                 # move to next target on pushbutton press
                                 target = self.util.map_px_to_cm(
                                     self.behavior_robot.target_px
                                 )
-                                print(
+                                logging.info(
                                     f"Move robot to new location: {self.behavior_robot.pos}\ntarget px: {self.behavior_robot.target_px}\ntarget cm: {target}\ndir: {self.behavior_robot}\nrobot dir: {robots[0].orientation}"
                                 )
                                 if not self.action:
@@ -464,12 +469,32 @@ class Behavior(PythonBehavior):
                                     ]
                                 self.trigger_next_robot_step = False
                             except:
-                                print(
+                                logging.error(
                                     f"\nBEHAVIOR: Error in move - trigger_next_robot_step"
+                                )
+                        # joystick movement
+                        elif self.behavior_robot.user_controlled:
+                            try:
+                                # get new robot target and move there
+                                target = self.util.map_px_to_cm(
+                                    self.behavior_robot.target_px
+                                )
+                                logging.info(f"ROBOT: joystick target: {target}")
+
+                                if not self.action:
+                                    self.action = [
+                                        RobotActionFlush(self.robot.uid),
+                                        RobotActionToTarget(
+                                            self.robot.uid, 0, (target[0], target[1])
+                                        ),
+                                    ]
+                            except:
+                                logging.error(
+                                    f"nBEHAVIOR: Error in move - joystick robot movement"
                                 )
 
             except:
-                print(f"\nBEHAVIOR: Error in move")
+                logging.error(f"\nBEHAVIOR: Error in move")
 
             # Update fish in tracking view and send positions
             serialized = serialize(self.behavior_robot, self.allfish)
@@ -481,7 +506,7 @@ class Behavior(PythonBehavior):
                 self.logcounter = 0
             self.logcounter += 1
 
-            # print("end of next speeds")
+            # logging.info("end of next speeds")
 
             if self.optimisation:
                 end_time = time.time()
@@ -493,7 +518,7 @@ class Behavior(PythonBehavior):
                 self.exec_stepper += 1
                 self.exec_time += exec_time
                 mean_exec_time = self.exec_time / self.exec_stepper
-                print(
+                logging.info(
                     f"mean tick takes {mean_exec_time} seconds; last tick took {exec_time} seconds"
                 )
             return_action = self.action
@@ -501,8 +526,8 @@ class Behavior(PythonBehavior):
 
             return return_action
         except Exception as e:
-            print(f"\nBEHAVIOR: Error in next_speeds!")
-            print(e)
+            logging.error(f"\nBEHAVIOR: Error in next_speeds!")
+            logging.error(e)
 
     def run_thread(self):
         timestep = 0
@@ -522,7 +547,7 @@ class Behavior(PythonBehavior):
 
     def queue_command(self, command):
         self.com_queue.put((command[0], command[1]))
-        # print("New command queued!")
+        # logging.info("New command queued!")
 
     #
     # Commands

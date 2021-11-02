@@ -23,7 +23,8 @@ class Util:
     # mapping only works with a square arena and world
     def map_cm_to_px(self, v):
         try:
-            return np.asarray(v) * self.world_to_arena_ratio
+            pixel_v = np.asarray(v) * self.world_to_arena_ratio
+            return np.asarray([self.arena_w - pixel_v[0], self.arena_h - pixel_v[1]])
         except:
             logging.error(f"UTIL: Error in mapping cm to px")
         # try:
@@ -35,7 +36,8 @@ class Util:
     # mapping only works with a square arena and world
     def map_px_to_cm(self, v):
         try:
-            return np.asarray(v) * self.arena_to_world_ratio
+            inverted_v = [self.arena_w - v[0], self.arena_h - v[1]]
+            return np.asarray(inverted_v) * self.arena_to_world_ratio
         except:
             logging.error(f"UTIL: Error in mapping px to cm")
 
@@ -44,3 +46,6 @@ class Util:
         # except:
         #     print(f"Error in px to cm mapping: {v}")
         #     return v
+
+    def rotate_arena_to_world(self, v):
+        return np.asarray([-v[0], -v[1]])

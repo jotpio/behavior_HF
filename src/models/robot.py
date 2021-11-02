@@ -70,15 +70,15 @@ class Robot(Agent):
         self.pos = np.asarray([pos_px[0], pos_px[1]])
 
         dir = robot.orientation
-        self.dir = np.asarray([dir[0], dir[1]])
+        inverted_dir = self.util.rotate_arena_to_world(dir)
+        self.dir = np.asarray([inverted_dir[0], inverted_dir[1]])
         self.dir_norm = normalize(self.dir)
-        self.ori = math.degrees(math.atan2(dir[1], dir[0]))
+        self.ori = math.degrees(math.atan2(inverted_dir[1], inverted_dir[0]))
         self.set_voltage(robot.voltage)
         self.set_charging(robot.chargingStatus)
         print(
             f"ROBOT: voltage: {self.voltage}, pos: {pos_px}, charging status: {self.charging}"
         )
-
 
     def tick(self, fishpos, fishdir, dists):
         try:
@@ -86,7 +86,7 @@ class Robot(Agent):
             if self.charging or self.go_to_charging_station:
                 return
             # tick only if not controlled
-            if not self.controlled:
+            if not self.controlled or self.user_controlled:
                 super().tick(fishpos, fishdir, dists)
         except:
             print(f"\nROBOT: Error in tick")
@@ -98,7 +98,7 @@ class Robot(Agent):
                 return
 
             # change target if robot is controlled (joystick)
-            if self.controlled:
+            if self.user_controlled or self.controlled:
                 # print(f"ROBOT: new dir - {self.new_dir}")
                 new_pos = self.pos + (self.new_dir * self.max_speed)
                 # set next target in pixel coordinates
@@ -225,8 +225,10 @@ class Robot(Agent):
 
         # check if voltage x minutes ago the same as current or voltage larger than 8.1
         if (
-            voltage_list_min[0] == self.voltage and len(voltage_list_min) == 10
-         and self.voltage > 7.8) or self.voltage > 8.05:
+            voltage_list_min[0] == self.voltage
+            and len(voltage_list_min) == 10
+            and self.voltage > 7.8
+        ) or self.voltage > 8.05:
             print("Robot is fully charged")
             self.full_charge = True
 
