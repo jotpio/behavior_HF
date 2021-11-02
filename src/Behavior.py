@@ -39,6 +39,7 @@ from PyQt5.QtCore import Qt, pyqtSignal, QObject, QEvent, QTimer
 import logging
 
 FORMAT = "\t%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+
 logging.basicConfig(format=FORMAT, level=logging.INFO)
 numba_logger = logging.getLogger("numba")
 numba_logger.setLevel(logging.WARNING)
@@ -77,6 +78,18 @@ class Behavior(QObject):
             path = (Path(__file__).parents[1]) / "cfg/config.yml"
             logging.info(f"BEHAVIOR: config path: {path}")
             self.config = yaml.safe_load(open(path))
+        # setup logging
+        formatter = logging.Formatter(
+            "\t%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+        )
+
+        logger = logging.getLogger()
+        handler = TimedRotatingFileHandler(
+            Path.home() / self.config["LOGGING"]["BEHAVIOR"], when="H", interval=1
+        )
+        handler.setFormatter(formatter)
+        handler.setLevel(logging.INFO)
+        logger.addHandler(handler)
 
         self.util = Util(self.config)
         self.debug_vis = DEBUG_VIS
@@ -144,7 +157,6 @@ class Behavior(QObject):
         self._step_logger = []
         self.exec_time = 0
         self.exec_stepper = 0
-
 
         # setup command queue
         self.com_queue = queue.LifoQueue()
@@ -294,7 +306,6 @@ class Behavior(QObject):
         serialized = serialize(self.behavior_robot, self.allfish)
         self.network_controller.update_positions.emit(serialized)
 
-        
         # log direction every few ticks
         if self.logcounter == 5 and self.behavior_robot.user_controlled:
             self.fish_logger.warning(f"{serialized}")

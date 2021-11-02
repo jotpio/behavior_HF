@@ -11,7 +11,6 @@ logging.basicConfig(format=FORMAT, level=logging.DEBUG)
 class ClientSenderThread(QObject):
     def __init__(self, parent, type, config=None):
         super().__init__()
-
         self.type = type
         self.print(f"Starting {self.type} client!")
         self.config = config

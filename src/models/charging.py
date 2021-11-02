@@ -1,4 +1,5 @@
-from robotracker import (
+try:
+    from robotracker import (
         PythonBehavior,
         RobotActionFlush,
         RobotActionHalt,
@@ -6,6 +7,8 @@ from robotracker import (
         RobotActionDirect,
         RobotActionTurningForward,
     )
+except:
+    print("CHARGING: no RT found")
 
 import numpy as np
 import sys,os

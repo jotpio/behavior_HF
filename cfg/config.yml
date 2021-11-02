@@ -1,6 +1,6 @@
 DEBUG:
   console: false
-  visualisation: true
+  visualisation: false
   optimisation: false
   optimisation_individual : false
   debug_charging: false
@@ -17,11 +17,11 @@ DEFAULTS:
   follow_angle: 90
 
   error_deg: 10
-  max_speed: 3
+  max_speed: 7
   max_turn_rate: 200  #per second
 
   time_step: 0.05 #0.05 = 20fps
-  heartbeat_path: /home/david/behavior_HF_dummy/heartbeat/RTLog.txt
+  heartbeat_path: /home/user1/RoboTracker_HF/heartbeat/RTLog.txt
 
 ARENA:
   width: 2000
@@ -72,6 +72,7 @@ ZONE_MODES:
 LOGGING:
   #ROBOT: '/home/user1/RoboTracker_HF/logs/robot/robot'
   #ROBOT: '/home/hf-robofish/Desktop/robot'
-  ROBOT: 'behavior_HF_dummy/logs/robot/robot'
-  INPUT: 'behavior_HF_dummy/logs/user_input/user_input'
-  FISH: 'behavior_HF_dummy/logs/fish/fish'
+  ROBOT: 'RoboTracker_HF/logs/robot/robot'
+  INPUT: 'RoboTracker_HF/logs/user_input/user_input'
+  FISH: 'RoboTracker_HF/logs/fish/fish'
+  BEHAVIOR: 'RoboTracker_HF/logs/behavior_prints/behavior_prints'

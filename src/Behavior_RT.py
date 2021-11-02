@@ -38,6 +38,13 @@ from PyQt5.sip import wrapinstance as wrapInstance
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import Qt, pyqtSignal, QObject, QEvent, QTimer
 
+import logging
+
+FORMAT = "\t%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+logging.basicConfig(format=FORMAT, level=logging.INFO)
+numba_logger = logging.getLogger("numba")
+numba_logger.setLevel(logging.WARNING)
+
 try:
     from robotracker import (
         PythonBehavior,
@@ -71,8 +78,23 @@ class Behavior(PythonBehavior):
             print(f"Behavior: config path: {path}")
             self.config = yaml.safe_load(open(path))
 
+        # setup logging
+        formatter = logging.Formatter(
+            "\t%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+        )
+
+        logger = logging.getLogger()
+        handler = TimedRotatingFileHandler(
+            Path.home() / self.config["LOGGING"]["BEHAVIOR"], when="H", interval=1
+        )
+        handler.setFormatter(formatter)
+        handler.setLevel(logging.INFO)
+        logger.addHandler(handler)
+
+        # setup util
         self.util = Util(self.config)
 
+        #
         self.default_num_fish = self.config["DEFAULTS"]["number_of_fish"]
         self.optimisation = self.config["DEBUG"]["optimisation"]
 
@@ -263,7 +285,9 @@ class Behavior(PythonBehavior):
         try:
             if self.just_started:
                 # check if close to charging station first and drive away in charging routine
-                close_to_ch_st = check_if_close_to_charging_station(self.behavior_robot, self.charger_pos)
+                close_to_ch_st = check_if_close_to_charging_station(
+                    self.behavior_robot, self.charger_pos
+                )
                 if not close_to_ch_st:
                     middle_pos = [self.arena.width / 2, self.arena.height / 2]
                     middle_pos_cm = self.util.map_px_to_cm(middle_pos)
@@ -330,7 +354,14 @@ class Behavior(PythonBehavior):
                     ]
                 else:
                     # charging routine
-                    charging_action = charging_routine(robots[0], self.behavior_robot, self.action, self.charger_pos, self.network_controller, self.charger_target)
+                    charging_action = charging_routine(
+                        robots[0],
+                        self.behavior_robot,
+                        self.action,
+                        self.charger_pos,
+                        self.network_controller,
+                        self.charger_target,
+                    )
                     if charging_action != []:
                         self.action = charging_action
 
@@ -444,7 +475,6 @@ class Behavior(PythonBehavior):
             serialized = serialize(self.behavior_robot, self.allfish)
             self.network_controller.update_positions.emit(serialized)
 
-            
             # log direction every few ticks
             if self.logcounter == 5 and self.behavior_robot.user_controlled:
                 self.fish_logger.warning(f"{serialized}")
