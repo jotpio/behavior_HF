@@ -1,5 +1,9 @@
 from socket import *
 from PyQt5.QtCore import Qt, pyqtSignal, QObject
+import logging
+from logging.handlers import TimedRotatingFileHandler
+from pathlib import Path
+from datetime import datetime
 
 from src.net.server import ServerListenerThread
 
@@ -13,6 +17,20 @@ class JoystickServer(ServerListenerThread):
 
         self.send_robodir.connect(self.parent_behavior.queue_command)
         self.control_robot.connect(self.parent_behavior.queue_command)
+
+
+        formatter = logging.Formatter("%(asctime)s -8s %(message)s")
+
+        self.logger = logging.getLogger("input_logger")
+        handler = TimedRotatingFileHandler(
+            Path.home() / self.config["LOGGING"]["INPUT"], when="H", interval=1
+        )
+        handler.setFormatter(formatter)
+        # handler.setLevel(logging.CRITICAL)
+        self.logger.addHandler(handler)
+        self.logcounter = 0
+
+        self.logger.warning(f"Started a new joystick server: {datetime.now()}")
 
     def run_thread(self):
         while True:
@@ -44,6 +62,12 @@ class JoystickServer(ServerListenerThread):
                             parsed_data = self.parse_data(data)
                             self.control_robot.emit(["control_robot", True])
                             self.send_robodir.emit(["change_robodir", parsed_data])
+
+                            # log direction every few ticks
+                            if self.logcounter == 5:
+                                self.logger.warning(f"{parsed_data}")
+                                self.logcounter = 0
+                            self.logcounter += 1
                 except:
                     self.print("Socket error!")
                     self.close_socket()

@@ -2,13 +2,14 @@ import logging
 from logging.handlers import TimedRotatingFileHandler
 from datetime import datetime
 import time
+from pathlib import Path
 
 
 formatter = logging.Formatter("%(asctime)s %(levelname) -8s %(message)s")
 
 logger = logging.getLogger("user_input_logger")
 handler = TimedRotatingFileHandler(
-    "/home/hf-robofish/Desktop/user_input", when="S", interval=5
+    Path.home() / "behavior_HF_dummy/logs/user_input/userinput", when="S", interval=5
 )
 handler.setFormatter(formatter)
 # handler.setLevel(logging.CRITICAL)

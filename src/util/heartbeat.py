@@ -8,8 +8,11 @@ logging.basicConfig(format=FORMAT, level=logging.DEBUG)
 
 
 class HeartbeatTimer(QThread):
-    def __init__(self):
+    def __init__(self, config):
         QThread.__init__(self)
+        self.config = config
+        self.heartbeat_path = self.config["DEFAULTS"]["heartbeat_path"]
+
 
     def __del__(self):
         self.wait()
@@ -22,8 +25,7 @@ class HeartbeatTimer(QThread):
 
     def heartbeat(self):
         try:
-            heartbeat_path = "/home/user1/RoboTracker_HF/heartbeat/RTLog.txt"
-            if not os.path.isfile(heartbeat_path):
-                os.mknod(heartbeat_path)
+            if not os.path.isfile(self.heartbeat_path):
+                os.mknod(self.heartbeat_path)
         except:
             logging.error("TIMER: Error in heartbeat!")
