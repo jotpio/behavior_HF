@@ -2,7 +2,7 @@ import time
 from socket import *
 import json
 from PyQt5.QtCore import Qt, pyqtSignal, QObject
-from src.net.client import ClientSenderThread
+from src.net.base.client import ClientSenderThread
 
 import sys
 import yaml
@@ -17,22 +17,23 @@ path_root = Path(__file__).parents[1]
 sys.path.append(str(path_root))
 
 
-class RobotAttributeClient(ClientSenderThread):
+class RobotCommandClient(ClientSenderThread):
     def __init__(self, parent, config=None):
-        super().__init__(parent=parent, type="robot_attribute", config=config)
+        super().__init__(parent=parent, type="robot_command", config=config)
+        self.robot_command = None
 
-    def send_robot_attributes(self, robot):
-        self.current_robot = robot
+    def send_robot_command(self, robot_command):
+        self.robot_command = robot_command
 
     def run_thread(self):
         self.print("Started Thread!")
         while not self.connected:
             self.connect_socket()  # sets self.connected to True if successful
-            while self.current_robot is not None:
-                # do stuff while connected
-                if self.connected:
+            # do stuff while connected
+            while self.connected:
+                if self.robot_command is not None:
                     try:
-                        dump = json.dumps(self.current_robot).encode("utf-8")
+                        dump = json.dumps(self.robot_command).encode("utf-8")
                         self.socket.sendall(dump)
                     except:
                         self.print("Error while sending command!")
@@ -52,17 +53,17 @@ class RobotAttributeClient(ClientSenderThread):
                         self.print("Error in getting response!")
                         self.close_socket()
 
-                time.sleep(1)
+                    # command delay
+                    time.sleep(0.2)
+            time.sleep(1)  # reconnection delay
 
 
 if __name__ == "__main__":
-
     try:
-
         path = (Path(__file__).parents[1]) / "../cfg/config.yml"
         print(f"BEHAVIOR: config path: {path}")
         config = yaml.safe_load(open(path))
-        s = RobotAttributeClient(None, config=config)
+        s = RobotCommandClient(None, config=config)
         thread = threading.Thread(target=s.run_thread)
         thread.daemon = True
         thread.start()

@@ -17,7 +17,7 @@ DEFAULTS:
   follow_angle: 90
 
   error_deg: 10
-  max_speed: 8
+  max_speed: 6
   max_turn_rate: 200  #per second
 
   time_step: 0.05 #0.05 = 20fps
@@ -42,14 +42,14 @@ NETWORK:
 
 CHARGER:
   #position: [94, 1820]
-  position: [95,1600]
+  position: [1900,200]
 
 ROBOT:
   controlled_from_start: false
   max_voltage: 8.0
   min_voltage: 7.4
   charging_time: 10 #in minutes
-  arena_repulsion: 300
+  arena_repulsion: 100
   max_turn_rate: 900  #per second
   error_deg: 1
 

@@ -5,17 +5,17 @@ import sys
 from PyQt5.QtCore import Qt, pyqtSignal, QObject
 import time
 
-from src.net.server import ServerListenerThread
+from src.net.base.server import ServerListenerThread
 
 
-class RobotCommandListenerServer(ServerListenerThread):
-    # send_command = pyqtSignal(list, name="send_command")
+class RobotAttributeListenerServer(ServerListenerThread):
+    send_attributes = pyqtSignal(list, name="send_attributes")
 
     def __init__(self, parent, config=None):
-        super().__init__(parent, "robot_command", config=config)
-        # self.send_command.connect(
-        #     self.parent_behavior.set_next_command, Qt.QueuedConnection
-        # )
+        super().__init__(parent, "robot_attribute", config=config)
+        self.send_attributes.connect(
+            self.parent_behavior.queue_command, Qt.QueuedConnection
+        )
 
     def run_thread(self):
         while True:
@@ -30,7 +30,6 @@ class RobotCommandListenerServer(ServerListenerThread):
                     amount_received = 0
                     while amount_received < 4096:
                         data = self.conn.recv(4096).decode("utf-8")
-
                         if len(data) == 0:
                             self.print("Empty data; closing socket!")
                             self.close_socket()
@@ -45,13 +44,12 @@ class RobotCommandListenerServer(ServerListenerThread):
                             data = json.loads(data)
                         except:
                             self.print(f"Error decoding message: {data}")
-                            break
                         amount_received += len(data)
-                        self.print(f"Received {data}")
+                        # self.print(f"Received {data}")
 
-                        self.parent_behavior.set_next_command(data)
+                        self.send_attributes.emit(data)
 
-                        # send received message to unity
+                        # send received message
                         try:
 
                             message = "received"
@@ -64,3 +62,9 @@ class RobotCommandListenerServer(ServerListenerThread):
                     self.print("Socket error!")
                     self.close_socket()
                     break
+
+    def close_socket(self):
+        # set real_robot to None
+        self.send_attributes.emit(["set_next_attribute", "no robot"])
+
+        return super().close_socket()

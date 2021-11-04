@@ -5,7 +5,7 @@ import sys
 from PyQt5.QtCore import Qt, pyqtSignal, QObject
 import time
 
-from src.net.server import ServerListenerThread
+from src.net.base.server import ServerListenerThread
 
 
 class CommandListenerServer(ServerListenerThread):

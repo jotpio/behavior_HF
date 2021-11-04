@@ -5,7 +5,7 @@ from logging.handlers import TimedRotatingFileHandler
 from pathlib import Path
 from datetime import datetime
 
-from src.net.server import ServerListenerThread
+from src.net.base.server import ServerListenerThread
 
 
 class JoystickServer(ServerListenerThread):
@@ -17,7 +17,6 @@ class JoystickServer(ServerListenerThread):
 
         self.send_robodir.connect(self.parent_behavior.queue_command)
         self.control_robot.connect(self.parent_behavior.queue_command)
-
 
         formatter = logging.Formatter("%(asctime)s -8s %(message)s")
 

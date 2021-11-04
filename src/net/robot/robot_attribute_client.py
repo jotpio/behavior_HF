@@ -2,7 +2,7 @@ import time
 from socket import *
 import json
 from PyQt5.QtCore import Qt, pyqtSignal, QObject
-from src.net.client import ClientSenderThread
+from src.net.base.client import ClientSenderThread
 
 import sys
 import yaml
@@ -17,28 +17,45 @@ path_root = Path(__file__).parents[1]
 sys.path.append(str(path_root))
 
 
-class RobotCommandClient(ClientSenderThread):
+class RobotAttributeClient(ClientSenderThread):
     def __init__(self, parent, config=None):
-        super().__init__(parent=parent, type="robot_command", config=config)
-        self.robot_command = {"command": "target", "args": [0]}
+        super().__init__(parent=parent, type="robot_attribute", config=config)
+        self.current_robot = None
 
-    def send_robot_command(self, robot_command):
-        self.robot_command = robot_command
+    def send_robot_attributes(self, robot):
+        self.current_robot = self.serialize_robot(robot)
+        # print(f"set current robot: {self.current_robot}")
+
+    def serialize_robot(self, robot):
+        if robot is not None:
+            return {
+                "uid": robot.uid,
+                "position": robot.position,
+                "orientation": robot.orientation,
+                "voltage": robot.voltage,
+                "chargingStatus": robot.chargingStatus,
+            }
+        else:
+            return None
 
     def run_thread(self):
         self.print("Started Thread!")
         while not self.connected:
             self.connect_socket()  # sets self.connected to True if successful
-            while self.robot_command is not None:
-                # do stuff while connected
-                if self.connected:
+
+            # do stuff while connected
+            while self.connected:
+                if self.current_robot is not None:
                     try:
-                        dump = json.dumps(self.robot_command).encode("utf-8")
+                        dump = json.dumps(
+                            ["set_next_attribute", self.current_robot]
+                        ).encode("utf-8")
                         self.socket.sendall(dump)
                     except:
                         self.print("Error while sending command!")
                         self.close_socket()
                         break
+                    # print("sent current robot")
 
                     # wait for response
                     try:
@@ -52,8 +69,19 @@ class RobotCommandClient(ClientSenderThread):
                     except:
                         self.print("Error in getting response!")
                         self.close_socket()
+                else:
+                    try:
+                        dump = json.dumps(["set_next_attribute", "no robot"]).encode(
+                            "utf-8"
+                        )
+                        self.socket.sendall(dump)
+                    except:
+                        self.print("Error while sending command!")
+                        self.close_socket()
+                        break
+                    self.current_robot = None
 
-                time.sleep(1)
+            time.sleep(1)  # reconnection delay
 
 
 if __name__ == "__main__":
@@ -63,7 +91,7 @@ if __name__ == "__main__":
         path = (Path(__file__).parents[1]) / "../cfg/config.yml"
         print(f"BEHAVIOR: config path: {path}")
         config = yaml.safe_load(open(path))
-        s = RobotCommandClient(None, config=config)
+        s = RobotAttributeClient(None, config=config)
         thread = threading.Thread(target=s.run_thread)
         thread.daemon = True
         thread.start()

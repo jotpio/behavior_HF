@@ -2,7 +2,7 @@ import time
 from socket import *
 import json
 from PyQt5.QtCore import Qt, pyqtSignal, QObject
-from src.net.client import ClientSenderThread
+from src.net.base.client import ClientSenderThread
 
 
 class PositionClient(ClientSenderThread):

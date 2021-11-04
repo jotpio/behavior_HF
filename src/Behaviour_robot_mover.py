@@ -7,6 +7,8 @@ from PyQt5.sip import wrapinstance as wrapInstance
 
 from pathlib import Path
 
+from util.heartbeat import HeartbeatTimer
+
 path_root = Path(__file__).parents[1]
 sys.path.append(str(path_root))
 # logging.error(sys.path)
@@ -17,14 +19,15 @@ try:
         RobotActionFlush,
         RobotActionHalt,
         RobotActionToTarget,
+        RobotActionDirect,
     )
 
     print("RoboTracker found!")
 except:
     print("No RoboTracker found!")
 
-from net.robot_command_listener_server import RobotCommandListenerServer
-from net.robot_attribute_client import RobotAttributeClient
+from net.robot.robot_command_listener_server import RobotCommandListenerServer
+from net.robot.robot_attribute_client import RobotAttributeClient
 
 
 class Behavior(PythonBehavior):
@@ -67,16 +70,52 @@ class Behavior(PythonBehavior):
         self.rac_thread.daemon = True
         self.rac_thread.start()
 
+        # heartbeat
+        self.heartbeat_obj = HeartbeatTimer(self.config)
+        self.heartbeat_obj.heartbeat_path = (
+            "/home/user1/RoboTracker_HF/heartbeat/RT_mover_Log.txt"
+        )
+        self.heartbeat_thread = threading.Thread(target=self.heartbeat_obj.run_thread)
+        self.heartbeat_thread.daemon = True
+        self.heartbeat_thread.start()
+
         # next_command
+        self.last_robot_command = None
         self.next_received_command = None
         self.next_robot_command = None
+        self.direct = False
 
     # def on_random_target_clicked(self):
     #     self.target = random.randint(10, 55), random.randint(10, 55)
     #     print(f"New target selected: {self.target[0]},{self.target[1]}")
 
     def set_next_command(self, command):
-        print(command)
+        try:
+            self.next_received_command = command
+            robot_command = []
+            for c in command:
+                if c[0] == "flush":
+                    self.direct = False
+                    robot_command.append(RobotActionFlush(*c[1]))
+                elif c[0] == "halt":
+                    self.direct = False
+                    robot_command.append(RobotActionHalt(*c[1]))
+                elif c[0] == "target":
+                    self.direct = False
+                    robot_command.append(RobotActionToTarget(*c[1]))
+                elif c[0] == "direct":
+                    if not self.direct:
+                        robot_command.append(
+                            RobotActionFlush(c[1][0])
+                        )  # flush last commands if direct movement is starting
+                        self.direct = True
+                    robot_command.append(RobotActionDirect(*c[1]))
+
+            # print(robot_command)
+            self.next_robot_command = robot_command
+        except Exception as e:
+            print("Error in parsing next command")
+            print(e)
 
     def supported_timesteps(self):
         return []
@@ -91,10 +130,15 @@ class Behavior(PythonBehavior):
         self.robot = None
         self.world = None
 
+        self.robot_attribute_client.close_socket()
+        self.robot_command_listener_server.close_socket()
+
     def next_speeds(self, robots, fish, timestep):
         robots = [r for r in robots if r.uid == self.robot.uid]
 
         action = []
+
+        # print(robots[0].action_list)
 
         if not robots:
             print("No robot found!")
@@ -109,10 +153,14 @@ class Behavior(PythonBehavior):
 
             # execute current command
             if self.next_robot_command is not None:
-                print(f"Next robot command: {self.next_robot_command}")
+                # print(f"Next robot command: {self.next_robot_command}")
                 action = self.next_robot_command
+                self.last_robot_command = self.next_robot_command
                 self.next_robot_command = None
+            elif self.direct:
+                action = self.last_robot_command
             else:
-                print(f"No new robot command!")
+                # print(f"No new robot command!")
+                pass
 
         return action

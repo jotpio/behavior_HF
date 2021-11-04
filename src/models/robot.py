@@ -9,12 +9,14 @@ import logging
 from logging.handlers import TimedRotatingFileHandler
 from pathlib import Path
 from src.util.util import Util
+import os, sys
 
 
 class Robot(Agent):
     def __init__(self, arena, config):
         super().__init__(0, [1000, 1000], 90, arena, config)
 
+        self.uid = 0
         self.util = Util(self.config)
 
         self.controlled = config["ROBOT"]["controlled_from_start"]
@@ -33,6 +35,7 @@ class Robot(Agent):
         self.go_to_charging_station = False
         self.full_charge = False
         self.user_controlled = False
+        self.stop = False
         self.arena_repulsion = self.config["ROBOT"]["arena_repulsion"]
 
         self.min_voltage = self.config["ROBOT"]["min_voltage"]
@@ -65,20 +68,24 @@ class Robot(Agent):
         self.logger.warning(f"Started a new robot: {now}")
 
     def set_attributes(self, robot):
-        pos_cm = robot.position
-        pos_px = self.util.map_cm_to_px(pos_cm)
-        self.pos = np.asarray([pos_px[0], pos_px[1]])
+        try:
+            self.uid = robot["uid"]
+            pos_cm = robot["position"]
+            pos_px = self.util.map_cm_to_px(pos_cm)
+            self.pos = np.asarray([pos_px[0], pos_px[1]])
 
-        dir = robot.orientation
-        inverted_dir = self.util.rotate_arena_to_world(dir)
-        self.dir = np.asarray([inverted_dir[0], inverted_dir[1]])
-        self.dir_norm = normalize(self.dir)
-        self.ori = math.degrees(math.atan2(inverted_dir[1], inverted_dir[0]))
-        self.set_voltage(robot.voltage)
-        self.set_charging(robot.chargingStatus)
-        print(
-            f"ROBOT: voltage: {self.voltage}, pos: {pos_px}, charging status: {self.charging}"
-        )
+            dir = robot["orientation"]
+            inverted_dir = self.util.rotate_arena_to_world(dir)
+            self.dir = np.asarray([inverted_dir[0], inverted_dir[1]])
+            self.dir_norm = normalize(self.dir)
+            self.ori = math.degrees(math.atan2(inverted_dir[1], inverted_dir[0]))
+            self.set_voltage(robot["voltage"])
+            self.set_charging(robot["chargingStatus"])
+            logging.info(
+                f"ROBOT: voltage: {self.voltage}, pos: {pos_px}, charging status: {self.charging}"
+            )
+        except:
+            logging.error(f"ROBOT: Error in attribute update")
 
     def tick(self, fishpos, fishdir, dists):
         try:
@@ -86,7 +93,7 @@ class Robot(Agent):
             if self.charging or self.go_to_charging_station:
                 return
             # tick only if not controlled
-            if not self.controlled or self.user_controlled:
+            if not self.controlled or not self.user_controlled:
                 super().tick(fishpos, fishdir, dists)
         except:
             print(f"\nROBOT: Error in tick")
@@ -102,7 +109,7 @@ class Robot(Agent):
                 # print(f"ROBOT: new dir - {self.new_dir}")
                 new_pos = self.pos + (self.new_dir * self.max_speed)
                 # set next target in pixel coordinates
-                self.target_px = self.pos + (self.new_dir * 100)
+                self.target_px = self.pos + (self.new_dir * 500)
 
                 # print(
                 #   f"ROBOT: new px target: {self.target_px} check if outside of arena!!!!"
@@ -117,10 +124,29 @@ class Robot(Agent):
                 # check if near arena borders and repulse from nearest border point
                 self.arena_points = self.arena.getNearestArenaPoints(new_pos)
 
-                for point in self.arena_points:  # arena points
-                    if point[1] < self.arena_repulsion:
-                        print(f"ROBOT: close point - {point[0]}")
-                        # print(f"repulse from {point[0]}")
+                # if real robot don"t go too close to wall
+                if self.real_robot:
+                    print("real robot repulsion")
+                    for idx, point in enumerate(self.arena_points):  # arena points
+                        if point[1] < self.arena_repulsion:
+                            print(f"ROBOT: close point - {point[0]}")
+                            if not self.go_to_charging_station or self.charging:
+                                if idx == 0:
+                                    self.new_dir = np.asarray([0.0, 1.0])  # go down
+                                # right edge
+                                elif idx == 1:
+                                    self.new_dir = np.asarray([-1.0, 0.0])  # go left
+                                # bottom edge
+                                elif idx == 2:
+                                    self.new_dir = np.asarray([0.0, -1.0])  # go up
+                                # left edge
+                                elif idx == 3:
+                                    self.new_dir = np.asarray([1.0, 0.0])  # go right
+
+                                new_pos = self.pos + (self.new_dir * self.max_speed)
+                                self.target_px = self.pos + (self.new_dir * 300)
+
+                                # print(f"repulse from {point[0]}")
 
                 self.pos = np.array(new_pos, dtype=np.float64)
                 self.dir = self.new_dir
@@ -156,8 +182,12 @@ class Robot(Agent):
                 else:
                     super().move()
 
-        except:
-            print(f"\nROBOT: Error in move!")
+        except Exception as e:
+            logging.error(f"\nROBOT: Error in move!")
+            logging.error(e)
+            exc_type, exc_obj, exc_tb = sys.exc_info()
+            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+            logging.error(exc_type, fname, exc_tb.tb_lineno)
 
     def set_voltage(self, voltage):
         try:
@@ -229,7 +259,7 @@ class Robot(Agent):
             and len(voltage_list_min) == 10
             and self.voltage > 7.8
         ) or self.voltage > 8.05:
-            print("Robot is fully charged")
+            # logging.info("Robot is fully charged")
             self.full_charge = True
 
         # also check if mean gradient of voltage list is close to 0
@@ -239,7 +269,8 @@ class Robot(Agent):
         mean_grad = np.mean(gradient)
         mean_voltage = np.mean(voltage_list_min)
         if math.isclose(mean_grad, 0, rel_tol=0.2) and mean_voltage > 8:
-            print("Robot is fully charged (gradient)")
+            # print("Robot is fully charged (gradient)")
+            pass
         else:
             pass
             # print(f"Robot is NOT fully charged (gradient): {gradient}")
@@ -258,8 +289,11 @@ class Robot(Agent):
 
             self.real_robot = robot
             if robot:
-                self.pos = np.asarray([robot.position[0], robot.position[1]])
-                self.dir = np.asarray([robot.orientation[0], robot.orientation[1]])
+                self.uid = robot["uid"]
+                self.pos = np.asarray([robot["position"][0], robot["position"][1]])
+                self.dir = np.asarray(
+                    [robot["orientation"][0], robot["orientation"][1]]
+                )
                 self.ori = np.degrees(math.atan2(self.dir[1], self.dir[0]))
 
                 print(f"Behavior - Robot: {self.pos}")
@@ -277,7 +311,7 @@ class Robot(Agent):
             self.arena_points = np.asarray(self.arena_points, dtype=object)
             id_closest_arena_p = np.argmin(self.arena_points[:, 1])
             # self.pos = self.arena_points[id_closest_arena_p][0]
-            print(id_closest_arena_p)
+            # print(id_closest_arena_p)
 
             # set new dir toward the middle, away from wall
             # top edge
