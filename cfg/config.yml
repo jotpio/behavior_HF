@@ -78,3 +78,7 @@ LOGGING:
   INPUT: 'RoboTracker_HF/logs/user_input/user_input'
   FISH: 'RoboTracker_HF/logs/fish/fish'
   BEHAVIOR: 'RoboTracker_HF/logs/behavior_prints/behavior_prints'
+
+SHUTDOWN:
+  PATH: '/home/user1/RoboTracker_HF/heartbeat/shutdown_trigger'
+  CHARGING_PATH: '/home/user1/RoboTracker_HF/heartbeat/shutdown_charging'

@@ -1,6 +1,8 @@
 import sys
 import yaml
 import threading
+import os.path
+import numpy as np
 
 from PyQt5.QtWidgets import QLayout, QVBoxLayout, QPushButton
 from PyQt5.sip import wrapinstance as wrapInstance
@@ -8,6 +10,7 @@ from PyQt5.sip import wrapinstance as wrapInstance
 from pathlib import Path
 
 from util.heartbeat import HeartbeatTimer
+from util.util import Util
 
 path_root = Path(__file__).parents[1]
 sys.path.append(str(path_root))
@@ -85,6 +88,19 @@ class Behavior(PythonBehavior):
         self.next_robot_command = None
         self.direct = False
 
+        # shutdown routine
+        self.shutdown_routine = False
+        self.shutdown_trigger_path = self.config["SHUTDOWN"]["PATH"]
+        self.shutdown_charging_path = self.config["SHUTDOWN"]["CHARGING_PATH"]
+
+        # util
+        self.util = Util(self.config)
+
+        # charger positions
+        self.charger_pos = self.config["CHARGER"]["position"]
+        charger_target = self.charger_pos[0] + 200, self.charger_pos[1]
+        self.charger_target = self.util.map_px_to_cm(charger_target)
+
     # def on_random_target_clicked(self):
     #     self.target = random.randint(10, 55), random.randint(10, 55)
     #     print(f"New target selected: {self.target[0]},{self.target[1]}")
@@ -146,21 +162,96 @@ class Behavior(PythonBehavior):
                 RobotActionFlush(self.robot.uid),
                 RobotActionHalt(self.robot.uid, 0),
             ]
+            # send no robot to simulation
+            self.robot_attribute_client.send_robot_attributes(None)
+
         else:
+            # check if robot shutdown routine is initialized
+            self.shutdown_routine = os.path.isfile(self.shutdown_trigger_path)
+            if not self.shutdown_routine:
 
-            # send new attributes to simulation
-            self.robot_attribute_client.send_robot_attributes(robots[0])
+                # send new attributes to simulation
+                self.robot_attribute_client.send_robot_attributes(robots[0])
 
-            # execute current command
-            if self.next_robot_command is not None:
-                # print(f"Next robot command: {self.next_robot_command}")
-                action = self.next_robot_command
-                self.last_robot_command = self.next_robot_command
-                self.next_robot_command = None
-            elif self.direct:
-                action = self.last_robot_command
+                # execute current command
+                if self.next_robot_command is not None:
+                    # print(f"Next robot command: {self.next_robot_command}")
+                    action = self.next_robot_command
+                    self.last_robot_command = self.next_robot_command
+                    self.next_robot_command = None
+                elif self.direct:
+                    action = self.last_robot_command
+                else:
+                    # print(f"No new robot command!")
+                    pass
             else:
-                # print(f"No new robot command!")
-                pass
+                action = self.shutdown_routine(robots[0])
+                # send no robot to simulation
+                self.robot_attribute_client.send_robot_attributes(None)
 
         return action
+
+    def shutdown_routine(self, robot):
+        # send no robot to simulation
+        self.robot_attribute_client.send_robot_attributes(None)
+
+        print("Charging routine: go to charging station")
+
+        # check if at right y position in front of charger
+        pos = robot.pos
+        pos_y_difference = np.abs(pos[1] - self.charger_pos[1])
+        if pos_y_difference < 50:
+            right_posy = True
+        else:
+            right_posy = False
+        # go to right position in front of charger
+        if not right_posy:
+            action = [
+                ["flush", [robot.uid]],
+                [
+                    "target",
+                    [robot.uid, 0, (self.charger_target[0], self.charger_target[1]),],
+                ],
+            ]
+            return action
+
+        print("Robot at right y pos")
+
+        # check rotation
+        rot = robot.ori
+        right_rot = np.abs(rot) > 175
+        # rotate until correct orientation
+        if not right_rot:
+            action = [
+                ["direct", [robot.uid, 0, -7.0, -7.0]],
+            ]
+            return action
+        print("Robot to charge and at right orientation")
+
+        # drive forwards into charger
+        # check first if at charger position
+        pos_x_difference = pos[0] - self.charger_pos[0]
+        if pos_x_difference <= 0:
+            right_posx = True
+        else:
+            right_posx = False
+
+        if not right_posx:
+            # charger_pos = self.config["CHARGER"]["position"]
+            # target = charger_pos[0], charger_pos[1]
+            # target = self.util.map_px_to_cm(target)
+
+            # drive slowly towards charger
+            action = [
+                ["direct", [robot.uid, 0, -7.0, -7.0]],
+            ]
+            return action
+        print("Robot to charge and at right x pos!")
+
+        if robot.chargingStatus:
+            # if os.path.exists(self.shutdown_trigger_path):
+            #     os.remove(self.shutdown_trigger_path)
+            # else:
+            #     print("Can not delete the file as it doesn't exists")
+            Path(self.shutdown_charging_path).touch()
+
