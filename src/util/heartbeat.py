@@ -1,4 +1,5 @@
-import os
+from math import exp
+import os, sys
 from PyQt5.QtCore import QThread
 import time
 import logging
@@ -13,7 +14,6 @@ class HeartbeatTimer(QThread):
         self.config = config
         self.heartbeat_path = self.config["DEFAULTS"]["heartbeat_path"]
 
-
     def __del__(self):
         self.wait()
 
@@ -27,5 +27,9 @@ class HeartbeatTimer(QThread):
         try:
             if not os.path.isfile(self.heartbeat_path):
                 os.mknod(self.heartbeat_path)
-        except:
+        except Exception as e:
             logging.error("TIMER: Error in heartbeat!")
+            logging.error(e)
+            exc_type, exc_obj, exc_tb = sys.exc_info()
+            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+            logging.error(exc_type, fname, exc_tb.tb_lineno)

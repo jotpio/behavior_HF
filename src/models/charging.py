@@ -48,25 +48,25 @@ def charging_routine(
             # if currently charging: drive backwards until not charging anymore
             if behavior_robot.charging:
                 logging.info(
-                    "BEHAVIOR: Done charging, trying to detach from charging station..."
+                    "CHARGING: Done charging, trying to detach from charging station..."
                 )
                 if not curr_action:
                     action = [
-                        ["direct", [behavior_robot.uid, 0, -7.0, -7.0]],
+                        ["direct", [behavior_robot.uid, 0, -5.0, -5.0]],
                     ]
                     return action
             # check if near charging station (for example at startup if full)
             elif close_to_ch_st:
 
-                print("close to charging station")
+                logging.info("CHARGING: Close to charging station")
                 # check orientation and rotate so its facing the charger
                 rot = behavior_robot.ori
-                right_rot = np.abs(rot) < 15
+                right_rot = np.abs(rot) > 175
 
                 # rotate until correct orientation
                 if not right_rot and not curr_action:
                     action = [
-                        ["direct", [behavior_robot.uid, 0, -7.0, 7.0]],
+                        ["direct", [behavior_robot.uid, 0, 3.0, -3.0]],
                     ]
                     return action
                 # if at right orientation drive backwards until not close to charging statio anymore
@@ -75,13 +75,13 @@ def charging_routine(
                         "CHARGING: Robot fully charged and at right orientation, driving backwards..."
                     )
                     action = [
-                        ["direct", [behavior_robot.uid, 0, -7.0, -7.0]],
+                        ["direct", [behavior_robot.uid, 0, -3.0, -3.0]],
                     ]
                     return action
             else:
-                network_controller.charge_command.emit(
-                    {"command": "done charging", "args": [0]}
-                )
+                # network_controller.charge_command.emit(
+                #     {"command": "done charging", "args": [0]}
+                # )
                 # logging.info(
                 #     "CHARGING: full but not charging and not at charging station"
                 # )
@@ -89,11 +89,11 @@ def charging_routine(
 
         # if not at charging station go there if voltage low
         if behavior_robot.go_to_charging_station:
-            network_controller.charge_command.emit(
-                {"command": "robot charging", "args": [0]}
-            )
+            # network_controller.charge_command.emit(
+            #     {"command": "robot charging", "args": [0]}
+            # )
 
-            logging.info("BEHAVIOR: Charging routine: go to charging station")
+            logging.info("CHARGING: Go to charging station")
 
             # check if at right y position in front of charger
             pos = behavior_robot.pos
@@ -122,11 +122,12 @@ def charging_routine(
             # check rotation
             rot = behavior_robot.ori
             right_rot = np.abs(rot) > 175
-            logging.info(rot)
+            # logging.info(rot)
+
             # rotate until correct orientation
             if not right_rot and not curr_action:
                 action = [
-                    ["direct", [behavior_robot.uid, 0, -7.0, -7.0]],
+                    ["direct", [behavior_robot.uid, 0, 3.0, -3.0]],
                 ]
                 return action
             logging.info("CHARGING: Robot to charge and at right orientation")
@@ -134,7 +135,7 @@ def charging_routine(
             # drive forwards into charger
             # check first if at charger position
             pos_x_difference = pos[0] - charger_pos[0]
-            if pos_x_difference <= 0:
+            if pos_x_difference >= 0:
                 right_posx = True
             else:
                 right_posx = False
@@ -146,7 +147,7 @@ def charging_routine(
 
                 # drive slowly towards charger
                 action = [
-                    ["direct", [behavior_robot.uid, 0, -7.0, -7.0]],
+                    ["direct", [behavior_robot.uid, 0, 4.0, 4.0]],
                 ]
                 return action
             logging.info("CHARGING: Robot to charge and at right x pos!")

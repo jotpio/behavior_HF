@@ -26,7 +26,7 @@ DEFAULTS:
 ARENA:
   width: 2000
   height: 2000
-  repulsion: 500
+  repulsion: 400
 
 WORLD:
   width: 64
@@ -42,14 +42,17 @@ NETWORK:
 
 CHARGER:
   #position: [94, 1820]
-  position: [1900,200]
+  position: [1950,200]
 
 ROBOT:
   controlled_from_start: false
-  max_voltage: 8.0
+  
+  max_voltage: 8.5
   min_voltage: 7.4
+  mean_voltage_full: 8
   charging_time: 10 #in minutes
-  arena_repulsion: 100
+  
+  arena_repulsion: 250
   max_turn_rate: 900  #per second
   error_deg: 1
 

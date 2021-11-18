@@ -47,7 +47,7 @@ class RobotCommandListenerServer(ServerListenerThread):
                             self.print(f"Error decoding message: {data}")
                             break
                         amount_received += len(data)
-                        self.print(f"Received {data}")
+                        # self.print(f"Received {data}")
 
                         self.parent_behavior.set_next_command(data)
 

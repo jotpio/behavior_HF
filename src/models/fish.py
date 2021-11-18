@@ -1,4 +1,5 @@
 import math, random
+import logging, os, sys
 import numpy as np
 from src.models.arena import Arena
 from src.models.agent import Agent
@@ -54,5 +55,8 @@ class Fish(Agent):
                     self.following = True
                     return
             self.following = False
-        except:
-            print("FISH: Error while following check")
+        except Exception as e:
+            logging.error("FISH: Error while following check")
+            exc_type, exc_obj, exc_tb = sys.exc_info()
+            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+            logging.error(exc_type, fname, exc_tb.tb_lineno)

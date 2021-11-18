@@ -1,6 +1,9 @@
+from logging import exception
 import math
 import random
 import time
+import logging
+import os, sys
 
 import numpy as np
 from numba import jit
@@ -96,8 +99,12 @@ class Agent:
                 if self.optimisation_individual:
                     t2 = time.perf_counter()
                     print(f"time for zone check: {t2 - t1}", flush=True)
-            except:
-                print(f"\nAGENT: Error in zone neighbor check - id {self.id}")
+            except Exception as e:
+                logging.error(f"\nAGENT: Error in zone neighbor check - id {self.id}")
+                logging.error(e)
+                exc_type, exc_obj, exc_tb = sys.exc_info()
+                fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+                logging.error(exc_type, fname, exc_tb.tb_lineno)
 
             try:
                 # check if near arena borders and repulse from nearest border point
@@ -111,8 +118,12 @@ class Agent:
                 if self.optimisation_individual:
                     t3 = time.perf_counter()
                     print(f"time for arena check: {t3 - t2}", flush=True)
-            except:
-                print(f"\nAGENT: Error in arena point check - id {self.id}")
+            except Exception as e:
+                logging.error(f"\nAGENT: Error in arena point check - id {self.id}")
+                logging.error(e)
+                exc_type, exc_obj, exc_tb = sys.exc_info()
+                fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+                logging.error(exc_type, fname, exc_tb.tb_lineno)
             #
             # for each point in radii check if in vision
             #
@@ -128,8 +139,12 @@ class Agent:
                 if self.optimisation_individual:
                     t4 = time.perf_counter()
                     print(f"time for vision check: {t4 - t3}", flush=True)
-            except:
-                print(f"\nAGENT: Error in radii check - id {self.id}")
+            except Exception as e:
+                logging.error(f"\nAGENT: Error in radii check - id {self.id}")
+                logging.error(e)
+                exc_type, exc_obj, exc_tb = sys.exc_info()
+                fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+                logging.error(exc_type, fname, exc_tb.tb_lineno)
 
             #
             # zone calculations
@@ -142,8 +157,12 @@ class Agent:
                     # repulse
                     dirt1 = repulse(np.asarray(points_zor), pos)
                     self.repulsed = True
-                except:
-                    print(f"\nAGENT: Error in repulsion - id {self.id}")
+                except Exception as e:
+                    logging.error(f"\nAGENT: Error in repulsion - id {self.id}")
+                    logging.error(e)
+                    exc_type, exc_obj, exc_tb = sys.exc_info()
+                    fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+                    logging.error(exc_type, fname, exc_tb.tb_lineno)
                 # print("repulse")
             # if no fish or wall in zone of repulsion
             else:
@@ -159,8 +178,11 @@ class Agent:
                         # align
                         dir_o = align(np.asarray(dirs_zoo))
                     except Exception as e:
-                        print(f"\nAGENT: Error in align - id {self.id}")
-                        print(e)
+                        logging.error(f"\nAGENT: Error in align - id {self.id}")
+                        logging.error(e)
+                        exc_type, exc_obj, exc_tb = sys.exc_info()
+                        fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+                        logging.error(exc_type, fname, exc_tb.tb_lineno)
 
                 dir_a = np.asarray([0, 0])
                 if n_zoa > 0:
@@ -168,8 +190,11 @@ class Agent:
                         # attract
                         dir_a = attract(np.asarray(points_zoa), pos)
                     except Exception as e:
-                        print(f"\nAGENT: Error in attract - id {self.id}")
-                        print(e)
+                        logging.error(f"\nAGENT: Error in attract - id {self.id}")
+                        logging.error(e)
+                        exc_type, exc_obj, exc_tb = sys.exc_info()
+                        fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+                        logging.error(exc_type, fname, exc_tb.tb_lineno)
 
                 # combine calculated directions
                 if n_zoa == 0 and n_zoo > 0:
@@ -193,8 +218,12 @@ class Agent:
                     [[np.cos(noise), -np.sin(noise)], [np.sin(noise), np.cos(noise)]]
                 )
                 dirt1 = np.dot(rand_rot_matrix, dirt1)
-            except:
-                print(f"\nAGENT: Error in rotation noise - id {self.id}")
+            except Exception as e:
+                logging.error(f"\nAGENT: Error in rotation noise - id {self.id}")
+                logging.error(e)
+                exc_type, exc_obj, exc_tb = sys.exc_info()
+                fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+                logging.error(exc_type, fname, exc_tb.tb_lineno)
 
             #
             # consider max turning rate theta
@@ -231,8 +260,12 @@ class Agent:
                     dirt1 = np.dot(
                         clipped_rot_matrix, self.dir
                     )  # rotate only by clipped rotation angle toward new direction
-            except:
-                print(f"\nAGENT: Error in rotation clipping - id {self.id}")
+            except Exception as e:
+                logging.error(f"\nAGENT: Error in rotation clipping - id {self.id}")
+                logging.error(e)
+                exc_type, exc_obj, exc_tb = sys.exc_info()
+                fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+                logging.error(exc_type, fname, exc_tb.tb_lineno)
             # if dirt1 in not null it is new dir
             if len_dirt1:
                 self.new_dir = normalize(np.asarray(dirt1))
@@ -245,8 +278,12 @@ class Agent:
             if self.optimisation_individual:
                 t7 = time.perf_counter()
                 print(f"time for fish tick: {t7 - time_start} \n", flush=True)
-        except:
-            print(f"\nAGENT: Error in tick - id {self.id}")
+        except Exception as e:
+            logging.error(f"\nAGENT: Error in tick - id {self.id}")
+            logging.error(e)
+            exc_type, exc_obj, exc_tb = sys.exc_info()
+            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+            logging.error(exc_type, fname, exc_tb.tb_lineno)
 
     def move(self):
         try:
@@ -262,8 +299,11 @@ class Agent:
             # new orientation is orientation of new direction vector
             self.ori = math.degrees(math.atan2(self.dir[1], self.dir[0]))
         except Exception as e:
-            print(f"\nAGENT: Error in move - id {self.id}")
-            print(e)
+            logging.error(f"\nAGENT: Error in move - id {self.id}")
+            logging.error(e)
+            exc_type, exc_obj, exc_tb = sys.exc_info()
+            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+            logging.error(exc_type, fname, exc_tb.tb_lineno)
 
         # print(pos, self.pos)
 
@@ -278,7 +318,7 @@ class Agent:
             self.arena_points = np.asarray(self.arena_points, dtype=object)
             id_closest_arena_p = np.argmin(self.arena_points[:, 1])
             # self.pos = self.arena_points[id_closest_arena_p][0]
-            print(id_closest_arena_p)
+            # print(id_closest_arena_p)
             # set new dir parallel to closest arena wall
 
             # top edge
@@ -315,6 +355,7 @@ class Agent:
         if zoa:
             self.zoa = zoa
 
+
 @jit(nopython=True)
 def check_in_vision(half_vision_cos, dir_norm, pos, point):
     between_v = np.asarray(point) - pos
@@ -340,6 +381,7 @@ def check_in_vision(half_vision_cos, dir_norm, pos, point):
     # print(f"in vision - angle {deg_angle}")
     return True
 
+
 @jit(nopython=True)
 def check_in_radii_vision(p_zor, d_zoo, p_zoa, half_vision_cos, dir_norm, pos):
     points_zor = []
@@ -363,15 +405,13 @@ def check_in_radii_vision(p_zor, d_zoo, p_zoa, half_vision_cos, dir_norm, pos):
 
     return points_zor, dirs_zoo, points_zoa
 
+
 @jit(nopython=True)
 def get_zone_neighbours(dists, fishpos, fishdir, zor, zoo, zoa):
     zor_iarr = (dists != 0) & (dists <= zor)
     zoo_iarr = (dists > zor) & (dists <= zoo)
     zoa_iarr = (dists > zoo) & (dists <= zoa)
 
-    # print(zor_iarr)
-    # print(zoo_iarr)
-    # print(zoa_iarr)
     # check if robot (id = 0) in attraction zone
     if zoa_iarr[0] or zoo_iarr[0]:
         influenced_by_robot = True
@@ -382,6 +422,7 @@ def get_zone_neighbours(dists, fishpos, fishdir, zor, zoo, zoa):
     points_zoa = fishpos[zoa_iarr]  # fish in zoa
 
     return points_zor, dirs_zoo, points_zoa, influenced_by_robot
+
 
 @jit(nopython=True)
 def repulse(points_zor, pos):
@@ -397,6 +438,7 @@ def repulse(points_zor, pos):
 
     return dir_r
 
+
 @jit(nopython=True)
 def align(dirs_zoo):
     # dir_o = np.asarray([0.0, 0.0])
@@ -405,6 +447,7 @@ def align(dirs_zoo):
     unit_dirs_zoo = normalize(dirs_zoo)
     # print(unit_dirs_zoo)
     return np.sum(unit_dirs_zoo, axis=0)
+
 
 @jit(nopython=True)
 def attract(points_zoa, pos):
@@ -417,6 +460,7 @@ def attract(points_zoa, pos):
     # unit_pos_zoa = normalize(points_zoa)
     # for f in points_zoa:
     #     dir_a = dir_a + ((np.asarray(f) - pos) / np.linalg.norm(np.asarray(f) - pos))
+
 
 @jit(nopython=True)
 def normalize(v):

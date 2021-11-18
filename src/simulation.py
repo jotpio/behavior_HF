@@ -54,6 +54,8 @@ class Behavior(QObject):
         self.world = None
         self.target = None
 
+        self.parameter_ui = None
+
         # load config
         self.config = config
         if self.config is None:
@@ -119,25 +121,12 @@ class Behavior(QObject):
         charger_target = self.charger_pos[0] + 200, self.charger_pos[1]
         self.charger_target = self.util.map_px_to_cm(charger_target)
 
-        # # initialize fish
+        # initialize fish
         self.reset_fish(self.config["DEFAULTS"]["number_of_fish"])
 
+        # numba
         self.initiate_numba()
 
-        # setup ui
-        # if RT_MODE:
-        #     try:
-        #         self.parent_layout = wrapInstance(layout, QLayout)
-        #     except:
-        #         logging.error(
-        #             f"Behavior: Error with layout wrapping. Creating own one..."
-        #         )
-        #         self.parent_layout = (
-        #             layout
-        #             if self.debug_vis is not None
-        #             else self.setup_parameter_layout()
-        #         )
-        # else:
         self.parent_layout = (
             layout if self.debug_vis is not None else self.setup_parameter_layout()
         )
@@ -287,6 +276,9 @@ class Behavior(QObject):
         except Exception as e:
             logging.error(f"BEHAVIOR: Error in start movement")
             logging.error(e)
+            exc_type, exc_obj, exc_tb = sys.exc_info()
+            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+            logging.error(exc_type, fname, exc_tb.tb_lineno)
 
         try:
             if self.optimisation:
@@ -302,12 +294,21 @@ class Behavior(QObject):
                         func = getattr(self, command[0])
                         args = command[1:]
                         func(*args)
-                    except:
+                    except Exception as e:
                         logging.error(
-                            f"Command not found or error in command execution! {command}"
+                            f"BEHAVIOR: Command not found or error in command execution! {command}"
                         )
-            except:
+                        logging.error(e)
+                        exc_type, exc_obj, exc_tb = sys.exc_info()
+                        fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+                        logging.error(exc_type, fname, exc_tb.tb_lineno)
+
+            except Exception as e:
                 logging.error(f"BEHAVIOR: Error in command queue")
+                logging.error(e)
+                exc_type, exc_obj, exc_tb = sys.exc_info()
+                fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+                logging.error(exc_type, fname, exc_tb.tb_lineno)
 
             try:
                 # check for flush robot target triggered
@@ -368,6 +369,9 @@ class Behavior(QObject):
                     f"BEHAVIOR: Error in robot priority actions/ charging behavior"
                 )
                 logging.error(e)
+                exc_type, exc_obj, exc_tb = sys.exc_info()
+                fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+                logging.error(exc_type, fname, exc_tb.tb_lineno)
 
             # TICK - update all fish one time step forward (tick)
             try:
@@ -386,16 +390,24 @@ class Behavior(QObject):
                         robot_pos = all_pos[0]
                         robot_dir = all_dir[0]
                         f.check_following(robot_pos, robot_dir)
-            except:
+            except Exception as e:
                 logging.error(f"BEHAVIOR: Error in tick")
+                logging.error(e)
+                exc_type, exc_obj, exc_tb = sys.exc_info()
+                fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+                logging.error(exc_type, fname, exc_tb.tb_lineno)
 
             # MOVE - move everything by new updated direction and speed
             try:
                 try:
                     for f in all_agents:
                         f.move()
-                except:
+                except Exception as e:
                     logging.error(f"BEHAVIOR: Error in all agents move")
+                    logging(e)
+                    exc_type, exc_obj, exc_tb = sys.exc_info()
+                    fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+                    logging.error(exc_type, fname, exc_tb.tb_lineno)
 
                 if (
                     not self.behavior_robot.charging
@@ -435,6 +447,11 @@ class Behavior(QObject):
                                     f"BEHAVIOR: Error in move - automatic robot movement"
                                 )
                                 logging.error(e)
+                                exc_type, exc_obj, exc_tb = sys.exc_info()
+                                fname = os.path.split(
+                                    exc_tb.tb_frame.f_code.co_filename
+                                )[1]
+                                logging.error(exc_type, fname, exc_tb.tb_lineno)
                         # next step clicked
                         elif self.trigger_next_robot_step:
                             try:
@@ -466,6 +483,11 @@ class Behavior(QObject):
                                     f"BEHAVIOR: Error in move - trigger_next_robot_step"
                                 )
                                 logging.error(e)
+                                exc_type, exc_obj, exc_tb = sys.exc_info()
+                                fname = os.path.split(
+                                    exc_tb.tb_frame.f_code.co_filename
+                                )[1]
+                                logging.error(exc_type, fname, exc_tb.tb_lineno)
                         # joystick movement
                         elif self.behavior_robot.user_controlled:
                             try:
@@ -490,26 +512,37 @@ class Behavior(QObject):
                                             ],
                                         ],
                                     ]
-                            except:
+                            except Exception as e:
                                 logging.error(
                                     f"nBEHAVIOR: Error in move - joystick robot movement"
                                 )
+                                logging.error(e)
+                                exc_type, exc_obj, exc_tb = sys.exc_info()
+                                fname = os.path.split(
+                                    exc_tb.tb_frame.f_code.co_filename
+                                )[1]
+                                logging.error(exc_type, fname, exc_tb.tb_lineno)
 
                         else:
                             print("none of the above")
 
-            except:
+            except Exception as e:
                 logging.error(f"BEHAVIOR: Error in move")
+                logging.error(e)
+                exc_type, exc_obj, exc_tb = sys.exc_info()
+                fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+                logging.error(exc_type, fname, exc_tb.tb_lineno)
 
             # Update fish in tracking view and send positions
             serialized = serialize(self.behavior_robot, self.allfish)
             self.network_controller.update_positions.emit(serialized)
 
-            # log direction every few ticks
-            if self.logcounter == 5 and self.behavior_robot.user_controlled:
-                self.fish_logger.warning(f"{serialized}")
-                self.logcounter = 0
-            self.logcounter += 1
+            # log fish every few ticks when user controlled
+            if self.behavior_robot.user_controlled:
+                if self.logcounter == 5:
+                    self.fish_logger.info(f"{serialized}")
+                    self.logcounter = 0
+                self.logcounter += 1
 
             # logging.info("end of next speeds")
 
@@ -554,6 +587,9 @@ class Behavior(QObject):
         except Exception as e:
             logging.error(f"BEHAVIOR: Error in next_speeds!")
             logging.error(e)
+            exc_type, exc_obj, exc_tb = sys.exc_info()
+            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+            logging.error(exc_type, fname, exc_tb.tb_lineno)
 
     def run_thread(self):
         timestep = 0
@@ -631,6 +667,8 @@ class Behavior(QObject):
                 logging.error("BEHAVIOR: Fish with id 1 not existing!")
 
         self.network_controller.update_ellipses.emit(self.behavior_robot, self.allfish)
+        if self.parameter_ui:
+            self.parameter_ui.num_fish_spinbox.setValue(num)
 
     def control_robot(self, flag):
         self.behavior_robot.controlled = flag
@@ -662,13 +700,21 @@ class Behavior(QObject):
                 logging.warning("BEHAVIOR: No robot received! Using simulated robot")
                 self.behavior_robot.real_robot = None
             else:
-                if self.behavior_robot.real_robot is None:
+                if (
+                    self.behavior_robot.real_robot is None
+                    and not self.behavior_robot.charging
+                    and not self.behavior_robot.go_to_charging_station
+                ):
                     logging.warning("BEHAVIOR: New robot connected! Using real robot")
                     self.behavior_robot.set_robot(robot)
                 # logging.info(f"BEHAVIOR:  {robot}")
                 self.behavior_robot.set_attributes(robot)
-        except:
+        except Exception as e:
             logging.error("BEHAVIOR: Error in robot attribute update")
+            logging.error(e)
+            exc_type, exc_obj, exc_tb = sys.exc_info()
+            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+            logging.error(exc_type, fname, exc_tb.tb_lineno)
 
     def change_zones(self, zone_dir):
         self.zor = zone_dir.get("zor", self.zor)

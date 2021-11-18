@@ -3,6 +3,9 @@ import yaml
 import threading
 import os.path
 import numpy as np
+import math
+
+import logging
 
 from PyQt5.QtWidgets import QLayout, QVBoxLayout, QPushButton
 from PyQt5.sip import wrapinstance as wrapInstance
@@ -16,6 +19,10 @@ path_root = Path(__file__).parents[1]
 sys.path.append(str(path_root))
 # logging.error(sys.path)
 
+FORMAT = "\t%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+
+logging.basicConfig(format=FORMAT, level=logging.INFO)
+
 try:
     from robotracker import (
         PythonBehavior,
@@ -25,9 +32,10 @@ try:
         RobotActionDirect,
     )
 
-    print("RoboTracker found!")
+    logging.info("RoboTracker found!")
 except:
-    print("No RoboTracker found!")
+    logging.error("No RoboTracker found!")
+    exit()
 
 from net.robot.robot_command_listener_server import RobotCommandListenerServer
 from net.robot.robot_attribute_client import RobotAttributeClient
@@ -52,7 +60,7 @@ class Behavior(PythonBehavior):
 
         # load config
         path = (Path(__file__).parents[1]) / "cfg/config.yml"
-        print(f"BEHAVIOR: config path: {path}")
+        logging.info(f"RT-Mover: config path: {path}")
         self.config = yaml.safe_load(open(path))
 
         # networking
@@ -89,7 +97,7 @@ class Behavior(PythonBehavior):
         self.direct = False
 
         # shutdown routine
-        self.shutdown_routine = False
+        self.shutdown = False
         self.shutdown_trigger_path = self.config["SHUTDOWN"]["PATH"]
         self.shutdown_charging_path = self.config["SHUTDOWN"]["CHARGING_PATH"]
 
@@ -98,12 +106,12 @@ class Behavior(PythonBehavior):
 
         # charger positions
         self.charger_pos = self.config["CHARGER"]["position"]
-        charger_target = self.charger_pos[0] + 200, self.charger_pos[1]
+        charger_target = self.charger_pos[0] - 200, self.charger_pos[1]
         self.charger_target = self.util.map_px_to_cm(charger_target)
 
     # def on_random_target_clicked(self):
     #     self.target = random.randint(10, 55), random.randint(10, 55)
-    #     print(f"New target selected: {self.target[0]},{self.target[1]}")
+    #     logging.info(f"New target selected: {self.target[0]},{self.target[1]}")
 
     def set_next_command(self, command):
         try:
@@ -127,22 +135,22 @@ class Behavior(PythonBehavior):
                         self.direct = True
                     robot_command.append(RobotActionDirect(*c[1]))
 
-            # print(robot_command)
+            # logging.info(robot_command)
             self.next_robot_command = robot_command
         except Exception as e:
-            print("Error in parsing next command")
-            print(e)
+            logging.error("Error in parsing next command")
+            logging.error(e)
 
     def supported_timesteps(self):
         return []
 
     def activate(self, robot, world):
-        print("Behavior: Activated")
+        logging.info("RT-Mover: Activated")
         self.robot = robot
         self.world = world
 
     def deactivate(self):
-        print("Behavior: Deactivated")
+        logging.info("RT-Mover: Deactivated")
         self.robot = None
         self.world = None
 
@@ -154,10 +162,10 @@ class Behavior(PythonBehavior):
 
         action = []
 
-        # print(robots[0].action_list)
+        # logging.info(robots[0].action_list)
 
         if not robots:
-            print("No robot found!")
+            logging.warning("No robot found!")
             action = [
                 RobotActionFlush(self.robot.uid),
                 RobotActionHalt(self.robot.uid, 0),
@@ -167,27 +175,29 @@ class Behavior(PythonBehavior):
 
         else:
             # check if robot shutdown routine is initialized
-            self.shutdown_routine = os.path.isfile(self.shutdown_trigger_path)
-            if not self.shutdown_routine:
+            self.shutdown = os.path.isfile(self.shutdown_trigger_path)
+            # if shutdown routine is active
+            if not self.shutdown:
 
                 # send new attributes to simulation
                 self.robot_attribute_client.send_robot_attributes(robots[0])
 
                 # execute current command
                 if self.next_robot_command is not None:
-                    # print(f"Next robot command: {self.next_robot_command}")
+                    # logging.info(f"Next robot command: {self.next_robot_command}")
                     action = self.next_robot_command
                     self.last_robot_command = self.next_robot_command
                     self.next_robot_command = None
                 elif self.direct:
                     action = self.last_robot_command
                 else:
-                    # print(f"No new robot command!")
+                    # logging.info(f"No new robot command!")
                     pass
             else:
+                logging.info("Shutdown routine")
                 action = self.shutdown_routine(robots[0])
-                # send no robot to simulation
-                self.robot_attribute_client.send_robot_attributes(None)
+
+        # logging.info(action)
 
         return action
 
@@ -195,63 +205,61 @@ class Behavior(PythonBehavior):
         # send no robot to simulation
         self.robot_attribute_client.send_robot_attributes(None)
 
-        print("Charging routine: go to charging station")
-
         # check if at right y position in front of charger
-        pos = robot.pos
-        pos_y_difference = np.abs(pos[1] - self.charger_pos[1])
+        pos = robot.position
+        pos_y_difference = np.abs(self.util.map_cm_to_px(pos) - self.charger_pos)[1]
+        # logging.info(pos_y_difference)
         if pos_y_difference < 50:
             right_posy = True
         else:
             right_posy = False
         # go to right position in front of charger
         if not right_posy:
+            logging.info("\tCharging routine: Not yet at right y pos")
             action = [
-                ["flush", [robot.uid]],
-                [
-                    "target",
-                    [robot.uid, 0, (self.charger_target[0], self.charger_target[1]),],
-                ],
+                RobotActionFlush(robot.uid),
+                RobotActionToTarget(
+                    robot.uid, 0, (self.charger_target[0], self.charger_target[1])
+                ),
             ]
             return action
 
-        print("Robot at right y pos")
-
         # check rotation
-        rot = robot.ori
+        ori = robot.orientation
+        rot = math.degrees(math.atan2(ori[1], ori[0]))
+        # logging.info(rot)
+        # logging.info(math.degrees(math.atan2(rot[1], rot[0])))
         right_rot = np.abs(rot) > 175
         # rotate until correct orientation
         if not right_rot:
+            logging.info("\tCharging routine: Not yet at right orientation")
             action = [
-                ["direct", [robot.uid, 0, -7.0, -7.0]],
+                RobotActionDirect(robot.uid, 0, 3.0, -3.0),
             ]
             return action
-        print("Robot to charge and at right orientation")
 
         # drive forwards into charger
         # check first if at charger position
-        pos_x_difference = pos[0] - self.charger_pos[0]
-        if pos_x_difference <= 0:
+        pos_x_difference = (self.util.map_cm_to_px(pos) - self.charger_pos)[0]
+        if pos_x_difference >= 0:
             right_posx = True
         else:
             right_posx = False
 
-        if not right_posx:
+        # if not at right x position and not charging
+        if not right_posx and not robot.chargingStatus:
             # charger_pos = self.config["CHARGER"]["position"]
             # target = charger_pos[0], charger_pos[1]
             # target = self.util.map_px_to_cm(target)
 
             # drive slowly towards charger
+            logging.info("\tCharging routine: Not yet at right x pos")
             action = [
-                ["direct", [robot.uid, 0, -7.0, -7.0]],
+                RobotActionDirect(robot.uid, 0, 4.0, 4.0),
             ]
             return action
-        print("Robot to charge and at right x pos!")
 
         if robot.chargingStatus:
-            # if os.path.exists(self.shutdown_trigger_path):
-            #     os.remove(self.shutdown_trigger_path)
-            # else:
-            #     print("Can not delete the file as it doesn't exists")
             Path(self.shutdown_charging_path).touch()
 
+        return []
