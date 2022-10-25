@@ -106,7 +106,7 @@ class Behavior(PythonBehavior):
 
         # charger positions
         self.charger_pos = self.config["CHARGER"]["position"]
-        charger_target = self.charger_pos[0] - 200, self.charger_pos[1]
+        charger_target = self.charger_pos[0] - 300, self.charger_pos[1]
         self.charger_target = self.util.map_px_to_cm(charger_target)
 
     # def on_random_target_clicked(self):
@@ -159,7 +159,6 @@ class Behavior(PythonBehavior):
 
     def next_speeds(self, robots, fish, timestep):
         robots = [r for r in robots if r.uid == self.robot.uid]
-
         action = []
 
         # logging.info(robots[0].action_list)
@@ -229,7 +228,7 @@ class Behavior(PythonBehavior):
         rot = math.degrees(math.atan2(ori[1], ori[0]))
         # logging.info(rot)
         # logging.info(math.degrees(math.atan2(rot[1], rot[0])))
-        right_rot = np.abs(rot) > 175
+        right_rot = np.abs(rot) > 172
         # rotate until correct orientation
         if not right_rot:
             logging.info("\tCharging routine: Not yet at right orientation")

@@ -118,7 +118,7 @@ class Behavior(QObject):
 
         # charger positions
         self.charger_pos = self.config["CHARGER"]["position"]
-        charger_target = self.charger_pos[0] + 200, self.charger_pos[1]
+        charger_target = self.charger_pos[0] - 300, self.charger_pos[1]
         self.charger_target = self.util.map_px_to_cm(charger_target)
 
         # initialize fish
@@ -246,40 +246,6 @@ class Behavior(QObject):
     #
 
     def next_speeds(self, robots, fish, timestep):
-
-        # at start go to middle of arena
-        try:
-            if self.just_started:
-                # check if close to charging station first and drive away in charging routine
-                close_to_ch_st = check_if_close_to_charging_station(
-                    self.behavior_robot, self.charger_pos
-                )
-                if not close_to_ch_st:
-                    if not self.action:
-                        self.action = [
-                            ["flush", [self.behavior_robot.uid]],
-                            [
-                                "target",
-                                [
-                                    self.behavior_robot.uid,
-                                    0,
-                                    (self.middle_pos_cm[0], self.middle_pos_cm[1]),
-                                ],
-                            ],
-                        ]
-                    # check if roughly at middle pos then robot is free
-                    diff = np.abs(np.asarray(self.middle_pos) - self.behavior_robot.pos)
-                    if diff[0] < 100 and diff[1] < 100:
-                        self.just_started = False
-                    else:
-                        logging.info(f"\nBEHAVIOR: In robot starting routine!!!!\n")
-        except Exception as e:
-            logging.error(f"BEHAVIOR: Error in start movement")
-            logging.error(e)
-            exc_type, exc_obj, exc_tb = sys.exc_info()
-            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
-            logging.error(exc_type, fname, exc_tb.tb_lineno)
-
         try:
             if self.optimisation:
                 start_time = time.time()
@@ -336,6 +302,7 @@ class Behavior(QObject):
                     )
                     if charging_action != []:
                         self.action = charging_action
+                        logging.info(f"Currently using charging action!")
 
                     # robot control buttons
                     if self.target is not None:
@@ -409,122 +376,116 @@ class Behavior(QObject):
                     fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
                     logging.error(exc_type, fname, exc_tb.tb_lineno)
 
-                if (
-                    not self.behavior_robot.charging
-                    and not self.behavior_robot.go_to_charging_station
-                ):
-                    if True:  # TODO
-                        # automatic movement
-                        if (
-                            not self.behavior_robot.controlled
-                            and not self.behavior_robot.user_controlled
-                        ):
-                            try:
+                # if (
+                #     not self.behavior_robot.charging
+                #     and not self.behavior_robot.go_to_charging_station
+                # ):
+                if True:  # TODO
+                    # automatic movement
+                    if (
+                        not self.behavior_robot.controlled
+                        and not self.behavior_robot.user_controlled
+                    ):
+                        try:
 
-                                # get new robot target and move there
-                                target = self.util.map_px_to_cm(
-                                    self.behavior_robot.target_px
-                                )
-                                # logging.info(f"ROBOT: new cm target: {target}")
+                            # get new robot target and move there
+                            target = self.util.map_px_to_cm(
+                                self.behavior_robot.target_px
+                            )
+                            # logging.info(f"ROBOT: new cm target: {target}")
 
-                                if not self.action:
-                                    self.action = [
-                                        ["flush", [self.behavior_robot.uid]],
+                            if not self.action:
+                                self.action = [
+                                    ["flush", [self.behavior_robot.uid]],
+                                    [
+                                        "target",
                                         [
-                                            "target",
-                                            [
-                                                self.behavior_robot.uid,
-                                                0,
-                                                (
-                                                    target[0],
-                                                    target[1],
-                                                ),
-                                            ],
+                                            self.behavior_robot.uid,
+                                            0,
+                                            (
+                                                target[0],
+                                                target[1],
+                                            ),
                                         ],
-                                    ]
-                            except Exception as e:
-                                logging.error(
-                                    f"BEHAVIOR: Error in move - automatic robot movement"
-                                )
-                                logging.error(e)
-                                exc_type, exc_obj, exc_tb = sys.exc_info()
-                                fname = os.path.split(
-                                    exc_tb.tb_frame.f_code.co_filename
-                                )[1]
-                                logging.error(exc_type, fname, exc_tb.tb_lineno)
-                        # next step clicked
-                        elif self.trigger_next_robot_step:
-                            try:
-                                # move to next target on pushbutton press
-                                target = self.util.map_px_to_cm(
-                                    self.behavior_robot.target_px
-                                )
-                                logging.info(
-                                    f"Move robot to new location: {self.behavior_robot.pos}\ntarget px: {self.behavior_robot.target_px}\ntarget cm: {target}\ndir: {self.behavior_robot}\nrobot ori: {self.behavior_robot.ori}"
-                                )
-                                if not self.action:
-                                    self.action = [
-                                        ["flush", [self.behavior_robot.uid]],
+                                    ],
+                                ]
+                        except Exception as e:
+                            logging.error(
+                                f"BEHAVIOR: Error in move - automatic robot movement"
+                            )
+                            logging.error(e)
+                            exc_type, exc_obj, exc_tb = sys.exc_info()
+                            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+                            logging.error(exc_type, fname, exc_tb.tb_lineno)
+                    # next step clicked
+                    elif self.trigger_next_robot_step:
+                        try:
+                            # move to next target on pushbutton press
+                            target = self.util.map_px_to_cm(
+                                self.behavior_robot.target_px
+                            )
+                            logging.info(
+                                f"Move robot to new location: {self.behavior_robot.pos}\ntarget px: {self.behavior_robot.target_px}\ntarget cm: {target}\ndir: {self.behavior_robot}\nrobot ori: {self.behavior_robot.ori}"
+                            )
+                            if not self.action:
+                                self.action = [
+                                    ["flush", [self.behavior_robot.uid]],
+                                    [
+                                        "target",
                                         [
-                                            "target",
-                                            [
-                                                self.behavior_robot.uid,
-                                                0,
-                                                (
-                                                    target[0],
-                                                    target[1],
-                                                ),
-                                            ],
+                                            self.behavior_robot.uid,
+                                            0,
+                                            (
+                                                target[0],
+                                                target[1],
+                                            ),
                                         ],
-                                    ]
-                                self.trigger_next_robot_step = False
-                            except Exception as e:
-                                logging.error(
-                                    f"BEHAVIOR: Error in move - trigger_next_robot_step"
-                                )
-                                logging.error(e)
-                                exc_type, exc_obj, exc_tb = sys.exc_info()
-                                fname = os.path.split(
-                                    exc_tb.tb_frame.f_code.co_filename
-                                )[1]
-                                logging.error(exc_type, fname, exc_tb.tb_lineno)
-                        # joystick movement
-                        elif self.behavior_robot.user_controlled:
-                            try:
-                                # get new robot target and move there
-                                target = self.util.map_px_to_cm(
-                                    self.behavior_robot.target_px
-                                )
-                                # logging.info(f"ROBOT: joystick target: {target}")
+                                    ],
+                                ]
+                            self.trigger_next_robot_step = False
+                        except Exception as e:
+                            logging.error(
+                                f"BEHAVIOR: Error in move - trigger_next_robot_step"
+                            )
+                            logging.error(e)
+                            exc_type, exc_obj, exc_tb = sys.exc_info()
+                            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+                            logging.error(exc_type, fname, exc_tb.tb_lineno)
+                    # joystick movement
+                    elif self.behavior_robot.user_controlled:
+                        try:
+                            # get new robot target and move there
+                            target = self.util.map_px_to_cm(
+                                self.behavior_robot.target_px
+                            )
+                            # logging.info(f"ROBOT: joystick target: {target}")
 
-                                if not self.action:
-                                    self.action = [
-                                        ["flush", [self.behavior_robot.uid]],
+                            if not self.action:
+                                self.action = [
+                                    ["flush", [self.behavior_robot.uid]],
+                                    [
+                                        "target",
                                         [
-                                            "target",
-                                            [
-                                                self.behavior_robot.uid,
-                                                0,
-                                                (
-                                                    target[0],
-                                                    target[1],
-                                                ),
-                                            ],
+                                            self.behavior_robot.uid,
+                                            0,
+                                            (
+                                                target[0],
+                                                target[1],
+                                            ),
                                         ],
-                                    ]
-                            except Exception as e:
-                                logging.error(
-                                    f"nBEHAVIOR: Error in move - joystick robot movement"
-                                )
-                                logging.error(e)
-                                exc_type, exc_obj, exc_tb = sys.exc_info()
-                                fname = os.path.split(
-                                    exc_tb.tb_frame.f_code.co_filename
-                                )[1]
-                                logging.error(exc_type, fname, exc_tb.tb_lineno)
+                                    ],
+                                ]
+                        except Exception as e:
+                            logging.error(
+                                f"nBEHAVIOR: Error in move - joystick robot movement"
+                            )
+                            logging.error(e)
+                            exc_type, exc_obj, exc_tb = sys.exc_info()
+                            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+                            logging.error(exc_type, fname, exc_tb.tb_lineno)
 
-                        else:
-                            print("none of the above")
+                    else:
+                        print("none of the above")
 
             except Exception as e:
                 logging.error(f"BEHAVIOR: Error in move")
@@ -766,5 +727,9 @@ class Behavior(QObject):
         for f in self.allfish:
             if f.id != 0:
                 f.max_speed = speed
+
+    def challenge_status(self, toggle):
+        status = "started!" if toggle == 1 else "stopped!"
+        logging.info(f"Challenge {status}")
 
     # endregion

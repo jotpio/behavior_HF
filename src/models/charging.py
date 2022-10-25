@@ -58,26 +58,30 @@ def charging_routine(
             # check if near charging station (for example at startup if full)
             elif close_to_ch_st:
 
-                logging.info("CHARGING: Close to charging station")
-                # check orientation and rotate so its facing the charger
+                logging.info(
+                    "CHARGING: Too close to charging station rotate until facing into tank"
+                )
+                # check orientation and rotate so its facing away from the charger
                 rot = behavior_robot.ori
-                right_rot = np.abs(rot) > 175
+                right_rot = rot < 170 and rot > 90
+                # logging.info(rot)
 
-                # rotate until correct orientation
+                # rotate until correct orientation away from charger
                 if not right_rot and not curr_action:
                     action = [
-                        ["direct", [behavior_robot.uid, 0, 3.0, -3.0]],
+                        ["direct", [behavior_robot.uid, 0, 2.0, -4.0]],
                     ]
                     return action
-                # if at right orientation drive backwards until not close to charging statio anymore
-                elif right_rot and not curr_action:
-                    logging.info(
-                        "CHARGING: Robot fully charged and at right orientation, driving backwards..."
-                    )
-                    action = [
-                        ["direct", [behavior_robot.uid, 0, -3.0, -3.0]],
-                    ]
-                    return action
+
+                # # if at right orientation drive backwards until not close to charging station anymore
+                # elif right_rot and not curr_action:
+                #     logging.info(
+                #         "CHARGING: Robot fully charged and at right orientation, driving backwards..."
+                #     )
+                #     action = [
+                #         ["direct", [behavior_robot.uid, 0, -5.0, -5.0]],
+                #     ]
+                #     return action
             else:
                 # network_controller.charge_command.emit(
                 #     {"command": "done charging", "args": [0]}
@@ -121,7 +125,7 @@ def charging_routine(
 
             # check rotation
             rot = behavior_robot.ori
-            right_rot = np.abs(rot) > 175
+            right_rot = np.abs(rot) < 8
             # logging.info(rot)
 
             # rotate until correct orientation
@@ -167,6 +171,6 @@ def charging_routine(
 
 def check_if_close_to_charging_station(behavior_robot, charger_pos):
     close_to_charging_station = np.all(
-        np.abs(behavior_robot.pos - np.asarray(charger_pos)) < 200
+        np.abs(behavior_robot.pos - np.asarray(charger_pos)) < 300
     )
     return close_to_charging_station

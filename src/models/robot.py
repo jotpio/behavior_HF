@@ -23,9 +23,9 @@ class Robot(Agent):
         self.debug = False
         self.voltage = 0.0
         self.old_voltage = None
-        self.max_charging_time = self.config["ROBOT"]["charging_time"]
+        self.charging_history_length = self.config["ROBOT"]["charging_history_length"]
         self.old_voltages_minute_queue = deque(
-            [], self.max_charging_time
+            [], self.charging_history_length
         )  # one for each minute
         self.old_voltages_second_queue = deque([], 60)  # one for each second
         self.new_dir = np.asarray([0.00001, 0])
@@ -69,18 +69,23 @@ class Robot(Agent):
 
     def set_attributes(self, robot):
         try:
-            self.uid = robot["uid"]
-            pos_cm = robot["position"]
-            pos_px = self.util.map_cm_to_px(pos_cm)
-            self.pos = np.asarray([pos_px[0], pos_px[1]])
-
-            dir = robot["orientation"]
-            inverted_dir = self.util.rotate_arena_to_world(dir)
-            self.dir = np.asarray([inverted_dir[0], inverted_dir[1]])
-            self.dir_norm = normalize(self.dir)
-            self.ori = math.degrees(math.atan2(inverted_dir[1], inverted_dir[0]))
-            self.set_voltage(robot["voltage"])
             self.set_charging(robot["chargingStatus"])
+            self.set_voltage(robot["voltage"])
+
+            self.uid = robot["uid"]
+
+            # only update position when not charging
+            if not self.charging:
+                pos_cm = robot["position"]
+                pos_px = self.util.map_cm_to_px(pos_cm)
+                self.pos = np.asarray([pos_px[0], pos_px[1]])
+
+                dir = robot["orientation"]
+                inverted_dir = self.util.rotate_arena_to_world(dir)
+                self.dir = np.asarray([inverted_dir[0], inverted_dir[1]])
+                self.dir_norm = normalize(self.dir)
+                self.ori = math.degrees(math.atan2(inverted_dir[1], inverted_dir[0]))
+
             # logging.info(
             #     f"ROBOT: voltage: {self.voltage}, pos: {pos_px}, charging status: {self.charging}"
             # )
@@ -93,12 +98,12 @@ class Robot(Agent):
 
     def tick(self, fishpos, fishdir, dists):
         try:
-            # dont tick if in charging state
-            if self.charging or self.go_to_charging_station:
-                return
             # tick only if not controlled
             if not self.controlled or not self.user_controlled:
                 super().tick(fishpos, fishdir, dists)
+            # dont tick if in charging state
+            if self.charging or self.go_to_charging_station:
+                return
         except Exception as e:
             logging.error(f"ROBOT: Error in tick")
             logging.error(e)
@@ -108,9 +113,9 @@ class Robot(Agent):
 
     def move(self):
         try:
-            # don't move elsewhere if charging or going to charging station
-            if self.charging or self.go_to_charging_station:
-                return
+            # # don't move elsewhere if charging or going to charging station
+            # if self.charging or self.go_to_charging_station:
+            #     return
 
             # change target if robot is controlled (joystick)
             if self.user_controlled or self.controlled:
@@ -132,7 +137,7 @@ class Robot(Agent):
                 # check if near arena borders and repulse from nearest border point
                 self.arena_points = self.arena.getNearestArenaPoints(new_pos)
 
-                # if real robot don"t go too close to wall
+                # if real robot don't go too close to wall
                 if (
                     self.real_robot
                     and not self.charging

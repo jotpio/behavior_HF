@@ -41,6 +41,7 @@ class JoystickServer(ServerListenerThread):
             # do things while connected
             while self.connected:
                 try:
+                    self.logger.info("New joystick connection")
                     amount_received = 0
                     while amount_received < 4096:
                         data = self.conn.recv(4096).decode("utf-8")
@@ -64,7 +65,7 @@ class JoystickServer(ServerListenerThread):
 
                             # log direction every few ticks
                             if self.logcounter == 5:
-                                self.logger.warning(f"{parsed_data}")
+                                self.logger.info(f"{parsed_data}")
                                 self.logcounter = 0
                             self.logcounter += 1
                 except:

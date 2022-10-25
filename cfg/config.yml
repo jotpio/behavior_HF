@@ -49,11 +49,11 @@ ROBOT:
   
   max_voltage: 8.5
   min_voltage: 7.4
-  mean_voltage_full: 8
-  charging_time: 10 #in minutes
+  mean_voltage_full: 8.2
+  charging_history_length: 10 #in minutes
   
-  arena_repulsion: 250
-  max_turn_rate: 900  #per second
+  arena_repulsion: 300
+  max_turn_rate: 800  #per second
   error_deg: 1
 
   zor: 1
