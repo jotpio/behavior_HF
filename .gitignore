@@ -2,3 +2,7 @@ __pycache__/
 .vscode/settings.json
 *.pyc
 */__pycache__/
+logs/behavior_prints/behavior_prints
+*.pyc
+*.pyc
+src/models/__pycache__/agent.cpython-39.pyc

@@ -1,6 +1,6 @@
 DEBUG:
   console: false
-  visualisation: false
+  visualisation: True
   optimisation: false
   optimisation_individual : false
   debug_charging: false
@@ -21,7 +21,7 @@ DEFAULTS:
   max_turn_rate: 200  #per second
 
   time_step: 0.05 #0.05 = 20fps
-  heartbeat_path: /home/user1/RoboTracker_HF/heartbeat/RTLog.txt
+  heartbeat_path: E:/git_repos/robotracker/behavior_HF_dummy/heartbeat/RTLog.txt
 
 ARENA:
   width: 2000
@@ -77,11 +77,11 @@ ZONE_MODES:
 LOGGING:
   #ROBOT: '/home/user1/RoboTracker_HF/logs/robot/robot'
   #ROBOT: '/home/hf-robofish/Desktop/robot'
-  ROBOT: 'RoboTracker_HF/logs/robot/robot'
-  INPUT: 'RoboTracker_HF/logs/user_input/user_input'
-  FISH: 'RoboTracker_HF/logs/fish/fish'
-  BEHAVIOR: 'RoboTracker_HF/logs/behavior_prints/behavior_prints'
+  ROBOT: 'E:/git_repos/robotracker/behavior_HF_dummy/logs/robot/robot'
+  INPUT: 'E:/git_repos/robotracker/behavior_HF_dummy/logs/user_input/user_input'
+  FISH: 'E:/git_repos/robotracker/behavior_HF_dummy/logs/fish/fish'
+  BEHAVIOR: 'E:/git_repos/robotracker/behavior_HF_dummy/logs/behavior_prints/behavior_prints'
 
 SHUTDOWN:
-  PATH: '/home/user1/RoboTracker_HF/heartbeat/shutdown_trigger'
-  CHARGING_PATH: '/home/user1/RoboTracker_HF/heartbeat/shutdown_charging'
+  PATH: 'E:/git_repos/robotracker/behavior_HF_dummy/heartbeat/shutdown_trigger'
+  CHARGING_PATH: 'E:/git_repos/robotracker/behavior_HF_dummy/heartbeat/shutdown_charging'
