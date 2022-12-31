@@ -11,11 +11,11 @@ from datetime import datetime
 path_root = Path(__file__).parents[1]
 sys.path.append(str(path_root))
 
-from src.net.network_controller import NetworkController
-from src.ui.parameter_ui import Parameter_UI
+#from src.net.network_controller import NetworkController
+from src.ui.parameter_ui_challenge_simulation import Parameter_UI
 from src.models.arena import Arena
 from src.models.fish import Fish
-from src.models.robot import Robot
+from src.models.leader_robot import LeaderRobot
 from src.models.agent import (
     attract,
     repulse,
@@ -25,11 +25,7 @@ from src.models.agent import (
     get_zone_neighbours,
 )
 from src.util.util import Util
-from src.util.heartbeat import HeartbeatTimer
-
 from src.util.serialize import serialize
-from src.models.charging import *
-
 
 from PyQt5.sip import wrapinstance as wrapInstance
 
@@ -48,6 +44,9 @@ np.warnings.filterwarnings("error", category=np.VisibleDeprecationWarning)
 
 
 class Behavior(QObject):
+    update_positions = pyqtSignal(list, name="update_positions")
+    update_ellipses = pyqtSignal(LeaderRobot, list, name="update_ellipses")
+
     def __init__(self, layout=None, DEBUG_VIS=None, config=None):
         super().__init__()
 
@@ -75,9 +74,12 @@ class Behavior(QObject):
         handler.setLevel(logging.INFO)
         logger.addHandler(handler)
 
+        # setup util
         self.util = Util(self.config)
+        # setup debug visualization
         self.debug_vis = DEBUG_VIS
-
+        
+        # setup default parameters
         self.default_num_fish = self.config["DEFAULTS"]["number_of_fish"]
         self.optimisation = self.config["DEBUG"]["optimisation"]
 
@@ -85,18 +87,8 @@ class Behavior(QObject):
         self.zoo = self.config["DEFAULTS"]["zoo"]
         self.zor = self.config["DEFAULTS"]["zor"]
 
-        # setup networking
-        self.network_controller = NetworkController(self, self.config)
-        self.network_controller.setup_networking()
-
         # time step in seconds
         self.time_step = self.config["DEFAULTS"]["time_step"]
-
-        # heartbeat
-        self.heartbeat_obj = HeartbeatTimer(config)
-        self.heartbeat_thread = threading.Thread(target=self.heartbeat_obj.run_thread)
-        self.heartbeat_thread.daemon = True
-        self.heartbeat_thread.start()
 
         # logging
         self.setup_logging()
@@ -109,17 +101,12 @@ class Behavior(QObject):
         self.middle_pos_cm = self.util.map_px_to_cm(self.middle_pos)
 
         # initialize robot
-        self.behavior_robot = Robot(self.arena, self.config)
+        self.behavior_robot = LeaderRobot(self.arena, self.config)
         # self.controlled = False
         self.trigger_next_robot_step = False
         self.flush_robot_target = False
         self.action = []
         self.just_started = False
-
-        # charger positions
-        self.charger_pos = self.config["CHARGER"]["position"]
-        charger_target = self.charger_pos[0] - 300, self.charger_pos[1]
-        self.charger_target = self.util.map_px_to_cm(charger_target)
 
         # initialize fish
         self.reset_fish(self.config["DEFAULTS"]["number_of_fish"])
@@ -131,6 +118,7 @@ class Behavior(QObject):
             layout if self.debug_vis is not None else self.setup_parameter_layout()
         )
 
+        # setup parameter ui widget
         self.setup_parameter_ui()  # fill parameter layout
 
         # step logger
@@ -228,18 +216,12 @@ class Behavior(QObject):
 
     def activate(self, robot, world):
         logging.info("Behavior: Activated")
-        # self.robot = robot
-        # self.behavior_robot.set_robot(robot)
         self.world = world
 
     def deactivate(self):
         logging.info("Behavior: Deactivated")
-        # self.robot = None
-        # self.behavior_robot.set_robot(None)
         self.world = None
 
-        # stop network threads
-        self.network_controller.exit()
 
     #
     # looping method
@@ -276,70 +258,7 @@ class Behavior(QObject):
                 fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
                 logging.error(exc_type, fname, exc_tb.tb_lineno)
 
-            try:
-                # check for flush robot target triggered
-                if self.flush_robot_target and not self.action:
-                    self.flush_robot_target = False
-                    self.action = [
-                        ["flush", [self.behavior_robot.uid]],
-                        ["halt", [self.behavior_robot.uid, 0]],
-                    ]
-
-                # no robot then send halt
-                if not self.behavior_robot.real_robot and not self.action:
-                    self.action = [
-                        ["flush", [self.behavior_robot.uid]],
-                        ["halt", [self.behavior_robot.uid, 0]],
-                    ]
-                else:
-                    # charging routine
-                    charging_action = charging_routine(
-                        self.behavior_robot,
-                        self.action,
-                        self.charger_pos,
-                        self.network_controller,
-                        self.charger_target,
-                    )
-                    if charging_action != []:
-                        self.action = charging_action
-                        logging.info(f"Currently using charging action!")
-
-                    # robot control buttons
-                    if self.target is not None:
-                        logging.info(f"Set target to {self.target}")
-                        target = self.target
-                        self.target = None
-                        if not self.action:
-                            self.action = [
-                                ["flush", [self.behavior_robot.uid]],
-                                [
-                                    "target",
-                                    [
-                                        self.behavior_robot.uid,
-                                        0,
-                                        (target[0], target[1]),
-                                    ],
-                                ],
-                            ]
-                    if self.turn_left and not self.action:
-                        self.action = [
-                            ["direct", [self.behavior_robot.uid, 0, 0.0, 5.0]],
-                        ]
-
-                    if self.turn_right and not self.action:
-                        self.action = [
-                            ["direct", [self.behavior_robot.uid, 0, 0.0, 5.0]],
-                        ]
-
-            except Exception as e:
-                logging.error(
-                    f"BEHAVIOR: Error in robot priority actions/ charging behavior"
-                )
-                logging.error(e)
-                exc_type, exc_obj, exc_tb = sys.exc_info()
-                fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
-                logging.error(exc_type, fname, exc_tb.tb_lineno)
-
+            
             # TICK - update all fish one time step forward (tick)
             try:
                 all_agents = [self.behavior_robot]
@@ -376,117 +295,6 @@ class Behavior(QObject):
                     fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
                     logging.error(exc_type, fname, exc_tb.tb_lineno)
 
-                # if (
-                #     not self.behavior_robot.charging
-                #     and not self.behavior_robot.go_to_charging_station
-                # ):
-                if True:  # TODO
-                    # automatic movement
-                    if (
-                        not self.behavior_robot.controlled
-                        and not self.behavior_robot.user_controlled
-                    ):
-                        try:
-
-                            # get new robot target and move there
-                            target = self.util.map_px_to_cm(
-                                self.behavior_robot.target_px
-                            )
-                            # logging.info(f"ROBOT: new cm target: {target}")
-
-                            if not self.action:
-                                self.action = [
-                                    ["flush", [self.behavior_robot.uid]],
-                                    [
-                                        "target",
-                                        [
-                                            self.behavior_robot.uid,
-                                            0,
-                                            (
-                                                target[0],
-                                                target[1],
-                                            ),
-                                        ],
-                                    ],
-                                ]
-                        except Exception as e:
-                            logging.error(
-                                f"BEHAVIOR: Error in move - automatic robot movement"
-                            )
-                            logging.error(e)
-                            exc_type, exc_obj, exc_tb = sys.exc_info()
-                            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
-                            logging.error(exc_type, fname, exc_tb.tb_lineno)
-                    # next step clicked
-                    elif self.trigger_next_robot_step:
-                        try:
-                            # move to next target on pushbutton press
-                            target = self.util.map_px_to_cm(
-                                self.behavior_robot.target_px
-                            )
-                            logging.info(
-                                f"Move robot to new location: {self.behavior_robot.pos}\ntarget px: {self.behavior_robot.target_px}\ntarget cm: {target}\ndir: {self.behavior_robot}\nrobot ori: {self.behavior_robot.ori}"
-                            )
-                            if not self.action:
-                                self.action = [
-                                    ["flush", [self.behavior_robot.uid]],
-                                    [
-                                        "target",
-                                        [
-                                            self.behavior_robot.uid,
-                                            0,
-                                            (
-                                                target[0],
-                                                target[1],
-                                            ),
-                                        ],
-                                    ],
-                                ]
-                            self.trigger_next_robot_step = False
-                        except Exception as e:
-                            logging.error(
-                                f"BEHAVIOR: Error in move - trigger_next_robot_step"
-                            )
-                            logging.error(e)
-                            exc_type, exc_obj, exc_tb = sys.exc_info()
-                            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
-                            logging.error(exc_type, fname, exc_tb.tb_lineno)
-                    # joystick movement
-                    elif self.behavior_robot.user_controlled:
-                        try:
-                            # get new robot target and move there
-                            target = self.util.map_px_to_cm(
-                                self.behavior_robot.target_px
-                            )
-                            # logging.info(f"ROBOT: joystick target: {target}")
-
-                            if not self.action:
-                                self.action = [
-                                    ["flush", [self.behavior_robot.uid]],
-                                    [
-                                        "target",
-                                        [
-                                            self.behavior_robot.uid,
-                                            0,
-                                            (
-                                                target[0],
-                                                target[1],
-                                            ),
-                                        ],
-                                    ],
-                                ]
-                        except Exception as e:
-                            logging.error(
-                                f"nBEHAVIOR: Error in move - joystick robot movement"
-                            )
-                            logging.error(e)
-                            exc_type, exc_obj, exc_tb = sys.exc_info()
-                            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
-                            logging.error(exc_type, fname, exc_tb.tb_lineno)
-
-                    else:
-                        print("none of the above")
-
             except Exception as e:
                 logging.error(f"BEHAVIOR: Error in move")
                 logging.error(e)
@@ -496,7 +304,7 @@ class Behavior(QObject):
 
             # Update fish in tracking view and send positions
             serialized = serialize(self.behavior_robot, self.allfish)
-            self.network_controller.update_positions.emit(serialized)
+            self.update_positions.emit(serialized)
 
             # log fish every few ticks when user controlled
             if self.behavior_robot.user_controlled:
@@ -520,29 +328,10 @@ class Behavior(QObject):
                 logging.info(
                     f"mean tick takes {mean_exec_time} seconds; last tick took {exec_time} seconds"
                 )
-            return_action = [
-                ["flush", [self.behavior_robot.uid]],
-                ["halt", [self.behavior_robot.uid, 0]],
-            ]
-            if (
-                not self.behavior_robot.stop
-                or self.behavior_robot.go_to_charging_station
-                or self.behavior_robot.charging
-            ):
-                return_action = self.action
 
-            self.action = []
-
-            # send new command everz 0.2 seconds
+            # send new command every 0.2 seconds
             now = datetime.now()
             time_diff = now - self.last_time
-
-            # if (
-            #     time_diff.microseconds > 50000 or return_action[0] == "direct"
-            # ):  # 0.5 seconds
-            self.network_controller.robot_command_client.send_robot_command(
-                return_action
-            )
             self.last_time = now
 
         except Exception as e:
@@ -571,7 +360,6 @@ class Behavior(QObject):
     def serialize(self):
         out = []
         # robot
-        # out.append([np.rint(self.behavior_robot.pos).tolist(), np.around(self.behavior_robot.ori, decimals=2), self.behavior_robot.id])
         robo_dict = {
             "id": self.behavior_robot.id,
             "orientation": np.around(self.behavior_robot.ori, decimals=2),
@@ -627,7 +415,7 @@ class Behavior(QObject):
             else:
                 logging.error("BEHAVIOR: Fish with id 1 not existing!")
 
-        self.network_controller.update_ellipses.emit(self.behavior_robot, self.allfish)
+        self.update_ellipses.emit(self.behavior_robot, self.allfish)
         if self.parameter_ui:
             self.parameter_ui.num_fish_spinbox.setValue(num)
 
@@ -654,29 +442,6 @@ class Behavior(QObject):
             self.behavior_robot.max_speed = 0
             self.behavior_robot.stop = True
 
-    def set_next_attribute(self, robot):
-        try:
-            # no robot found by robotracker
-            if "no robot" in robot:
-                logging.warning("BEHAVIOR: No robot received! Using simulated robot")
-                self.behavior_robot.real_robot = None
-            else:
-                if (
-                    self.behavior_robot.real_robot is None
-                    and not self.behavior_robot.charging
-                    and not self.behavior_robot.go_to_charging_station
-                ):
-                    logging.warning("BEHAVIOR: New robot connected! Using real robot")
-                    self.behavior_robot.set_robot(robot)
-                # logging.info(f"BEHAVIOR:  {robot}")
-                self.behavior_robot.set_attributes(robot)
-        except Exception as e:
-            logging.error("BEHAVIOR: Error in robot attribute update")
-            logging.error(e)
-            exc_type, exc_obj, exc_tb = sys.exc_info()
-            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
-            logging.error(exc_type, fname, exc_tb.tb_lineno)
-
     def change_zones(self, zone_dir):
         self.zor = zone_dir.get("zor", self.zor)
         self.zoo = zone_dir.get("zoo", self.zoo)
@@ -687,7 +452,7 @@ class Behavior(QObject):
             f.change_zones(self.zor, self.zoo, self.zoa)
 
         if self.debug_vis:
-            self.network_controller.update_ellipses.emit(
+            self.update_ellipses.emit(
                 self.behavior_robot, self.allfish
             )
 
@@ -715,7 +480,7 @@ class Behavior(QObject):
             f.change_zones(self.zor, self.zoo, self.zoa)
 
         if self.debug_vis:
-            self.network_controller.update_ellipses.emit(
+            self.update_ellipses.emit(
                 self.behavior_robot, self.allfish
             )
 

@@ -10,9 +10,9 @@ DEBUG:
 
 DEFAULTS:
   number_of_fish: 1
-  zoa: 200
-  zoo: 80
-  zor: 10
+  zoa: 220
+  zoo: 100
+  zor: 40
   vision_angle: 300
   follow_angle: 90
 

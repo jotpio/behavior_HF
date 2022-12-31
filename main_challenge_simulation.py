@@ -1,9 +1,7 @@
 import threading
 import sys
 
-# from src.net.TCPDummyServer import TCPDummyServer
-# from src.net.TCPClient import TCPClient
-from src.simulation import Behavior
+from src.challenge_simulation import Behavior
 from src.ui.debug_visualization import DebugVisualization
 from PyQt5.QtWidgets import (
     QGraphicsEllipseItem,
@@ -29,7 +27,16 @@ class Main:
         self.config = yaml.safe_load(open(path / "cfg/config.yml"))
         print(self.config)
         # run behavior/client thread to get joystick movement and send positional data
-        print("running behavior / tcp client")
+        print("\n         ___     ___ _           _ _                         __  _                 _       _   _             \n"
+              "  /\  /\/ __\   / __\ |__   __ _| | | ___ _ __   __ _  ___  / _\(_)_ __ ___  _   _| | __ _| |_(_) ___  _ __  \n"
+              " / /_/ / _\    / /  | '_ \ / _` | | |/ _ \ '_ \ / _` |/ _ \ \ \ | | '_ ` _ \| | | | |/ _` | __| |/ _ \| '_ \ \n"
+              "/ __  / /     / /___| | | | (_| | | |  __/ | | | (_| |  __/ _\ \| | | | | | | |_| | | (_| | |_| | (_) | | | |\n"
+              "\/ /_/\/      \____/|_| |_|\__,_|_|_|\___|_| |_|\__, |\___| \__/|_|_| |_| |_|\__,_|_|\__,_|\__|_|\___/|_| |_|\n"
+              "                                                |___/"                                                        
+        )
+
+        print("running challenge simulation behavior")
+
 
         # setup debug visualization
         self.debug_vis = (
@@ -47,14 +54,14 @@ class Main:
             layout=layout, DEBUG_VIS=self.debug_vis, config=self.config
         )
         if self.debug_vis is not None:
-            self.behavior.network_controller.update_positions.connect(
+            self.behavior.update_positions.connect(
                 self.debug_vis.update_view, Qt.QueuedConnection
             )
         if self.debug_vis is not None:
-            self.behavior.network_controller.update_ellipses.connect(
+            self.behavior.update_ellipses.connect(
                 self.debug_vis.update_ellipses, Qt.QueuedConnection
             )
-        self.behavior.network_controller.update_ellipses.emit(
+        self.behavior.update_ellipses.emit(
             self.behavior.behavior_robot, self.behavior.allfish
         )
 

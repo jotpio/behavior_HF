@@ -293,6 +293,8 @@ class Agent:
             inside = self.check_inside_arena(new_pos)
             if not inside:
                 new_pos = self.pos + (self.new_dir * self.max_speed)
+
+            # apply new position and direction
             self.pos = np.array(new_pos, dtype=np.float64)
             self.dir = self.new_dir
             self.dir_norm = normalize(self.dir)

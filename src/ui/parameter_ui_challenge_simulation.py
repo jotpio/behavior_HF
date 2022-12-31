@@ -4,9 +4,6 @@ from PyQt5.QtGui import QPen, QBrush, QColor, QPainter
 
 from src.util.util import Util
 
-import random
-
-
 class Parameter_UI(QVBoxLayout):
     def __init__(self, parent_behavior, RT_MODE, config):
         super().__init__()
@@ -15,9 +12,6 @@ class Parameter_UI(QVBoxLayout):
         self.util = Util(self.config)
         self.RT_MODE = RT_MODE
         self.parent_behavior = parent_behavior
-
-        self.random_target = QPushButton(f"Drive to new random point")
-        self.addWidget(self.random_target)
 
         # number of fish
         self.num_fish_layout = QHBoxLayout()
@@ -93,35 +87,7 @@ class Parameter_UI(QVBoxLayout):
         self.target_layout.addWidget(self.sel_target_pb)
         self.addLayout(self.target_layout)
 
-        #turn buttons
-        self.turn_layout = QHBoxLayout()
-        self.turn_left_pb = QPushButton("Turn left")
-        self.turn_right_pb = QPushButton("Turn right")
-        self.turn_layout.addWidget(self.turn_left_pb)
-        self.turn_layout.addWidget(self.turn_right_pb)
-        self.addLayout(self.turn_layout)
-
-        #simulate charging
-        self.sim_charge_pb = QPushButton("Go to charging station")
-        self.addWidget(self.sim_charge_pb)
-
-        # auto robot toggle
-        self.auto_robot_checkbox = QCheckBox("Enable automatic robot movement")
-        self.addWidget(self.auto_robot_checkbox)
-
-        # next robot step
-        self.next_robot_step = QPushButton("Next robot step")
-        self.addWidget(self.next_robot_step)
-
-        # flush robot target
-        self.flush_robot_button = QPushButton("Flush robot target")
-        self.addWidget(self.flush_robot_button)
-
         # connect
-
-        self.random_target.clicked.connect(
-            self.on_random_target_clicked, Qt.QueuedConnection
-        )
         self.reset_button.clicked.connect(
             self.on_reset_button_clicked, Qt.QueuedConnection
         )
@@ -155,39 +121,6 @@ class Parameter_UI(QVBoxLayout):
             self.on_zoa_spinbox_valueChanged, Qt.QueuedConnection
         )
 
-        self.auto_robot_checkbox.toggled.connect(
-                self.on_auto_robot_checkbox_changed, Qt.QueuedConnection
-        )
-        self.next_robot_step.clicked.connect(
-            self.on_next_robot_step_clicked, Qt.QueuedConnection
-        )
-        self.flush_robot_button.clicked.connect(
-            self.on_flush_robot_target_clicked, Qt.QueuedConnection
-        )
-
-        self.sel_target_pb.clicked.connect(
-            self.on_sel_target_pb_clicked, Qt.QueuedConnection
-        )
-
-        self.turn_left_pb.pressed.connect(
-            self.on_turn_left_pb_clicked, Qt.QueuedConnection
-        )
-
-        self.turn_right_pb.pressed.connect(
-            self.on_turn_right_pb_clicked, Qt.QueuedConnection
-        )
-
-        self.turn_left_pb.released.connect(
-            self.on_turn_left_pb_released, Qt.QueuedConnection
-        )
-
-        self.turn_right_pb.released.connect(
-            self.on_turn_right_pb_released, Qt.QueuedConnection
-        )
-
-        self.sim_charge_pb.clicked.connect(
-            self.on_sim_charge_pb_clicked, Qt.QueuedConnection
-        )
 
         # configure checkboxes
         if not self.RT_MODE:
@@ -197,22 +130,8 @@ class Parameter_UI(QVBoxLayout):
             self.vision_checkbox.setChecked(False)
             self.dark_mode_checkbox.setChecked(True)
             self.sel_target_pb.setEnabled(False)
-        self.auto_robot_checkbox.setChecked(not self.config["ROBOT"]["controlled_from_start"])
-        self.next_robot_step.setEnabled(not self.auto_robot_checkbox.isChecked())
-        self.flush_robot_button.setEnabled(not self.auto_robot_checkbox.isChecked())
 
     # region <UI slots>
-    def on_random_target_clicked(self):
-        self.parent_behavior.target = random.randint(10, 45), random.randint(10, 45)
-        if self.parent_behavior.debug_vis is not None:
-            self.parent_behavior.debug_vis.scene.addEllipse(
-                self.util.map_cm_to_px(self.target[0]),
-                self.util.map_cm_to_px(self.target[1]),
-                10,
-                10,
-            )
-        print(f"New target selected: {self.target[0]},{self.target[1]}")
-
     def on_reset_button_clicked(self):
         val = self.num_fish_spinbox.value()
         self.parent_behavior.com_queue.put(("reset_fish", val))
@@ -226,7 +145,7 @@ class Parameter_UI(QVBoxLayout):
                 self.zoa_checkbox.isChecked(),
             ]
             self.parent_behavior.debug_vis.change_zones(zones)
-            self.parent_behavior.network_controller.update_ellipses.emit(
+            self.parent_behavior.update_ellipses.emit(
                 self.parent_behavior.behavior_robot, self.parent_behavior.allfish
             )
 
@@ -235,7 +154,7 @@ class Parameter_UI(QVBoxLayout):
             self.parent_behavior.debug_vis.toggle_vision_cones(
                 self.vision_checkbox.isChecked()
             )
-            self.parent_behavior.network_controller.update_ellipses.emit(
+            self.parent_behavior.update_ellipses.emit(
                 self.parent_behavior.behavior_robot, self.parent_behavior.allfish
             )
 
@@ -260,23 +179,10 @@ class Parameter_UI(QVBoxLayout):
             self.parent_behavior.debug_vis.toggle_dark_mode(
                 self.dark_mode_checkbox.isChecked()
             )
-            self.parent_behavior.network_controller.update_ellipses.emit(
+            self.parent_behavior.update_ellipses.emit(
                 self.parent_behavior.behavior_robot, self.parent_behavior.allfish
             )
 
-    # robot slots
-    def on_auto_robot_checkbox_changed(self, val):
-
-        self.parent_behavior.queue_command(["control_robot", not val])
-        self.next_robot_step.setEnabled(not val)
-        self.flush_robot_button.setEnabled(not val)
-
-    # if auto robot movement is disabled then the next automatic robot movement target can be triggered by this button or manually by the joystick movement
-    def on_next_robot_step_clicked(self):
-        self.parent_behavior.trigger_next_robot_step = True
-
-    def on_flush_robot_target_clicked(self):
-        self.parent_behavior.flush_robot_target = True
 
     def on_sel_target_pb_clicked(self):
         target_x = self.util.map_px_to_cm(self.target_x.value())
@@ -290,22 +196,6 @@ class Parameter_UI(QVBoxLayout):
                 10,
             )
         print(f"New target selected: {self.parent_behavior.target[0]},{self.parent_behavior.target[1]}")
-
-    def on_turn_right_pb_clicked(self):
-        self.parent_behavior.turn_right = True
-
-    def on_turn_left_pb_clicked(self):
-        self.parent_behavior.turn_left = True
-
-    def on_turn_left_pb_released(self):
-        self.parent_behavior.turn_left = False
-
-    def on_turn_right_pb_released(self):
-        self.parent_behavior.turn_right = False
-
-    def on_sim_charge_pb_clicked(self):
-        print("BUTTON: Go to charging station")
-        self.parent_behavior.behavior_robot.go_to_charging_station = True
 
     # endregion
 

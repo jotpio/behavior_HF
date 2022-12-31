@@ -6,3 +6,12 @@ logs/behavior_prints/behavior_prints
 *.pyc
 *.pyc
 src/models/__pycache__/agent.cpython-39.pyc
+logs/fish/fish
+logs/robot/robot
+logs/user_input/user_input
+src/__pycache__/Behavior.cpython-39.pyc
+logs/*
+src/models/__pycache__/agent.cpython-39.pyc
+.vscode/*
+HF_workspace.code-workspace
+.vscode/launch.json
