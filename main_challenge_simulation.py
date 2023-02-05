@@ -1,20 +1,9 @@
 import threading
-import sys
 
 from src.challenge_simulation import Behavior
 from src.ui.debug_visualization import DebugVisualization
-from PyQt5.QtWidgets import (
-    QGraphicsEllipseItem,
-    QLayout,
-    QVBoxLayout,
-    QHBoxLayout,
-    QPushButton,
-    QSpinBox,
-    QLabel,
-    QApplication,
-    QWidget,
-)
-from PyQt5.QtCore import *
+
+from PyQt5.QtCore import Qt
 
 import yaml
 from pathlib import Path
@@ -27,16 +16,16 @@ class Main:
         self.config = yaml.safe_load(open(path / "cfg/config.yml"))
         print(self.config)
         # run behavior/client thread to get joystick movement and send positional data
-        print("\n         ___     ___ _           _ _                         __  _                 _       _   _             \n"
-              "  /\  /\/ __\   / __\ |__   __ _| | | ___ _ __   __ _  ___  / _\(_)_ __ ___  _   _| | __ _| |_(_) ___  _ __  \n"
-              " / /_/ / _\    / /  | '_ \ / _` | | |/ _ \ '_ \ / _` |/ _ \ \ \ | | '_ ` _ \| | | | |/ _` | __| |/ _ \| '_ \ \n"
-              "/ __  / /     / /___| | | | (_| | | |  __/ | | | (_| |  __/ _\ \| | | | | | | |_| | | (_| | |_| | (_) | | | |\n"
-              "\/ /_/\/      \____/|_| |_|\__,_|_|_|\___|_| |_|\__, |\___| \__/|_|_| |_| |_|\__,_|_|\__,_|\__|_|\___/|_| |_|\n"
-              "                                                |___/"                                                        
+        print(
+            "\n         ___     ___ _           _ _                         __  _                 _       _   _             \n"
+            "  /\  /\/ __\   / __\ |__   __ _| | | ___ _ __   __ _  ___  / _\(_)_ __ ___  _   _| | __ _| |_(_) ___  _ __  \n"
+            " / /_/ / _\    / /  | '_ \ / _` | | |/ _ \ '_ \ / _` |/ _ \ \ \ | | '_ ` _ \| | | | |/ _` | __| |/ _ \| '_ \ \n"
+            "/ __  / /     / /___| | | | (_| | | |  __/ | | | (_| |  __/ _\ \| | | | | | | |_| | | (_| | |_| | (_) | | | |\n"
+            "\/ /_/\/      \____/|_| |_|\__,_|_|_|\___|_| |_|\__, |\___| \__/|_|_| |_| |_|\__,_|_|\__,_|\__|_|\___/|_| |_|\n"
+            "                                                |___/"
         )
 
         print("running challenge simulation behavior")
-
 
         # setup debug visualization
         self.debug_vis = (

@@ -77,25 +77,18 @@ To get a local copy up and running follow these simple steps.
 ### Prerequisites
 
 This is an example of how to list things you need to use the software and how to install them.
-* npm
-  ```sh
-  npm install npm@latest -g
-  ```
+* install Python 3.9.5
+* install git
 
 ### Installation
 
-1. Get a free API Key at [https://example.com](https://example.com)
-2. Clone the repo
+1. Clone the repo
    ```sh
    git clone https://github.com/jotpio/behavior_HF.git
    ```
-3. Install NPM packages
+2. Install pip packages using setup.py
    ```sh
-   npm install
-   ```
-4. Enter your API in `config.js`
-   ```js
-   const API_KEY = 'ENTER YOUR API';
+   python setup.py install 
    ```
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
@@ -105,23 +98,17 @@ This is an example of how to list things you need to use the software and how to
 <!-- USAGE EXAMPLES -->
 ## Usage
 
-Use this space to show useful examples of how a project can be used. Additional screenshots, code examples and demos work well in this space. You may also link to more resources.
+The `main_challenge_simulation.py` simulates the challenge in the Humboldt Forum. Use it if you intend to run it locally as it does not connect to the other software components.
+Run the it by executing:
+   ```sh
+   python main_challenge_simulation.py
+   ```
 
-_For more examples, please refer to the [Documentation](https://example.com)_
-
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
-
-
-
-<!-- ROADMAP -->
-## Roadmap
-
-- [ ] Feature 1
-- [ ] Feature 2
-- [ ] Feature 3
-    - [ ] Nested Feature
-
-See the [open issues](https://github.com/jotpio/behavior_HF/issues) for a full list of proposed features (and known issues).
+The `main_simulation.py` is the startup for the simulation in the Humboldt Forum exhibit. It connects to the other software components.
+Run the it by executing:
+   ```sh
+   python main_simulation.py
+   ```
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -148,7 +135,18 @@ Don't forget to give the project a star! Thanks again!
 <!-- LICENSE -->
 ## License
 
-Distributed under the MIT License. See `LICENSE.txt` for more information.
+Shield: [![CC BY 4.0][cc-by-shield]][cc-by]
+
+This work is licensed under a
+[Creative Commons Attribution 4.0 International License][cc-by].
+
+[![CC BY 4.0][cc-by-image]][cc-by]
+
+[cc-by]: http://creativecommons.org/licenses/by/4.0/
+[cc-by-image]: https://i.creativecommons.org/l/by/4.0/88x31.png
+[cc-by-shield]: https://img.shields.io/badge/License-CC%20BY%204.0-lightgrey.svg
+
+See `LICENSE` for more information.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -168,9 +166,9 @@ Project Link: [https://github.com/jotpio/behavior_HF](https://github.com/jotpio/
 <!-- ACKNOWLEDGMENTS -->
 ## Acknowledgments
 
-* []()
-* []()
-* []()
+* [David James](https://www.igb-berlin.de/profile/david-james)
+* [David Bierbach](https://www.igb-berlin.de/profile/david-bierbach)
+* [Dustin Lehmann](https://www.tu.berlin/control/user-dlehmann)
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 

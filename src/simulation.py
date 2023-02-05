@@ -1,16 +1,3 @@
-from logging import debug
-import random, time, math, threading, queue, os, sys, logging
-import numpy as np
-import yaml  # pyyaml
-from pathlib import Path
-from scipy.spatial import distance_matrix
-from collections.abc import Iterable
-from logging.handlers import TimedRotatingFileHandler
-from datetime import datetime
-
-path_root = Path(__file__).parents[1]
-sys.path.append(str(path_root))
-
 from src.net.network_controller import NetworkController
 from src.ui.parameter_ui import Parameter_UI
 from src.models.arena import Arena
@@ -28,18 +15,32 @@ from src.util.util import Util
 from src.util.heartbeat import HeartbeatTimer
 
 from src.util.serialize import serialize
-from src.models.charging import *
+from src.models.charging import charging_routine
 
+import random
+import time
+import threading
+import queue
+import os
+import sys
+import logging
+import numpy as np
+import yaml  # pyyaml
+from pathlib import Path
+from scipy.spatial import distance_matrix
+from logging.handlers import TimedRotatingFileHandler
+from datetime import datetime
 
-from PyQt5.sip import wrapinstance as wrapInstance
+path_root = Path(__file__).parents[1]
+sys.path.append(str(path_root))
 
 from PyQt5.QtWidgets import *
-from PyQt5.QtCore import Qt, pyqtSignal, QObject, QEvent, QTimer
+from PyQt5.QtCore import QObject
 
-import logging
 
 FORMAT = "\t%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 
+# setup logging
 logging.basicConfig(format=FORMAT, level=logging.INFO)
 numba_logger = logging.getLogger("numba")
 numba_logger.setLevel(logging.WARNING)
@@ -48,6 +49,11 @@ np.warnings.filterwarnings("error", category=np.VisibleDeprecationWarning)
 
 
 class Behavior(QObject):
+    """
+    Controller class of the simulation. In the event loop, it handles the agents movement and manages the robot.
+    This class connects to RoboTracker and Unity, and sends RobotActions, agent positions
+    """
+
     def __init__(self, layout=None, DEBUG_VIS=None, config=None):
         super().__init__()
 
@@ -138,8 +144,6 @@ class Behavior(QObject):
         self.exec_time = 0
         self.exec_stepper = 0
 
-        self.last_time = datetime.now()
-
         # setup command queue
         self.com_queue = queue.LifoQueue()
 
@@ -158,7 +162,10 @@ class Behavior(QObject):
 
         logging.info("Behavior: Initialized!")
 
-    def initiate_numba(self):
+    def initiate_numba(self) -> None:
+        """
+        Initially executes reused functions sped up by JIT compiler numba
+        """
         repulse(np.asarray([[0.0, 0.0]]), np.asarray([0, 0]))
         align(np.asarray([[0.0, 0.0]]))
         attract(np.asarray([[0.0, 0.0]]), np.asarray([0, 0]))
@@ -180,7 +187,7 @@ class Behavior(QObject):
         )
         normalize(np.asarray([1.4, 2.0]))
 
-    def setup_logging(self):
+    def setup_logging(self) -> None:
         now = datetime.now()
         formatter = logging.Formatter("%(asctime)s -8s %(message)s")
         self.fish_logger = logging.getLogger("fish_logger")
@@ -213,39 +220,22 @@ class Behavior(QObject):
 
         return layout
 
-    def setup_debug_vis(self):
+    def setup_debug_vis(self) -> None:
         self.debug_vis.setArena(self.arena)
 
-    def setup_parameter_ui(self):
+    def setup_parameter_ui(self) -> None:
         logging.info("Behavior: Setting up parameter ui")
         self.parameter_ui = Parameter_UI(self, False, self.config)
         #
         self.parent_layout.addLayout(self.parameter_ui)
 
-    def supported_timesteps(self):
-        logging.info("Behavior: supported_timesteps called")
-        return []
-
-    def activate(self, robot, world):
-        logging.info("Behavior: Activated")
-        # self.robot = robot
-        # self.behavior_robot.set_robot(robot)
-        self.world = world
-
-    def deactivate(self):
-        logging.info("Behavior: Deactivated")
-        # self.robot = None
-        # self.behavior_robot.set_robot(None)
-        self.world = None
-
-        # stop network threads
-        self.network_controller.exit()
-
-    #
-    # looping method
-    #
-
-    def next_speeds(self, robots, fish, timestep):
+    def next_speeds(self) -> None:
+        """
+        looping method:
+            - received commands are executed
+            - the simulation agents are managed
+            - the robot movement is translated to RoboTracker Actions
+        """
         try:
             if self.optimisation:
                 start_time = time.time()
@@ -276,6 +266,7 @@ class Behavior(QObject):
                 fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
                 logging.error(exc_type, fname, exc_tb.tb_lineno)
 
+            # robot priority actions (incl. charging behavior)
             try:
                 # check for flush robot target triggered
                 if self.flush_robot_target and not self.action:
@@ -340,7 +331,9 @@ class Behavior(QObject):
                 fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
                 logging.error(exc_type, fname, exc_tb.tb_lineno)
 
+            #
             # TICK - update all fish one time step forward (tick)
+            #
             try:
                 all_agents = [self.behavior_robot]
                 all_agents.extend(self.allfish)
@@ -364,22 +357,20 @@ class Behavior(QObject):
                 fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
                 logging.error(exc_type, fname, exc_tb.tb_lineno)
 
+            #
             # MOVE - move everything by new updated direction and speed
+            #
             try:
                 try:
                     for f in all_agents:
                         f.move()
                 except Exception as e:
                     logging.error(f"BEHAVIOR: Error in all agents move")
-                    logging(e)
+                    logging.error(e)
                     exc_type, exc_obj, exc_tb = sys.exc_info()
                     fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
                     logging.error(exc_type, fname, exc_tb.tb_lineno)
 
-                # if (
-                #     not self.behavior_robot.charging
-                #     and not self.behavior_robot.go_to_charging_station
-                # ):
                 if True:  # TODO
                     # automatic movement
                     if (
@@ -387,12 +378,10 @@ class Behavior(QObject):
                         and not self.behavior_robot.user_controlled
                     ):
                         try:
-
                             # get new robot target and move there
                             target = self.util.map_px_to_cm(
                                 self.behavior_robot.target_px
                             )
-                            # logging.info(f"ROBOT: new cm target: {target}")
 
                             if not self.action:
                                 self.action = [
@@ -494,6 +483,8 @@ class Behavior(QObject):
                 fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
                 logging.error(exc_type, fname, exc_tb.tb_lineno)
 
+            # done with behavior simulation
+
             # Update fish in tracking view and send positions
             serialized = serialize(self.behavior_robot, self.allfish)
             self.network_controller.update_positions.emit(serialized)
@@ -504,8 +495,6 @@ class Behavior(QObject):
                     self.fish_logger.info(f"{serialized}")
                     self.logcounter = 0
                 self.logcounter += 1
-
-            # logging.info("end of next speeds")
 
             if self.optimisation:
                 end_time = time.time()
@@ -520,6 +509,8 @@ class Behavior(QObject):
                 logging.info(
                     f"mean tick takes {mean_exec_time} seconds; last tick took {exec_time} seconds"
                 )
+
+            # send robot action to RoboTracker
             return_action = [
                 ["flush", [self.behavior_robot.uid]],
                 ["halt", [self.behavior_robot.uid, 0]],
@@ -533,17 +524,9 @@ class Behavior(QObject):
 
             self.action = []
 
-            # send new command everz 0.2 seconds
-            now = datetime.now()
-            time_diff = now - self.last_time
-
-            # if (
-            #     time_diff.microseconds > 50000 or return_action[0] == "direct"
-            # ):  # 0.5 seconds
             self.network_controller.robot_command_client.send_robot_command(
                 return_action
             )
-            self.last_time = now
 
         except Exception as e:
             logging.error(f"BEHAVIOR: Error in next_speeds!")
@@ -552,26 +535,22 @@ class Behavior(QObject):
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             logging.error(exc_type, fname, exc_tb.tb_lineno)
 
-    def run_thread(self):
-        timestep = 0
+    def run_thread(self) -> None:
+        step = 0
         while True:
-            self.next_speeds([], [], timestep)
-            timestep += 1
+            self.next_speeds()
+            step += 1
             time.sleep(self.time_step)
 
     def __del__(self):
-        # self.p_thread.
-        # self.c_thread
-        # self.j_thread
         pass
 
     def app_exec(self):
         sys.exit(self.app.exec_())
 
-    def serialize(self):
+    def serialize(self) -> list:
         out = []
         # robot
-        # out.append([np.rint(self.behavior_robot.pos).tolist(), np.around(self.behavior_robot.ori, decimals=2), self.behavior_robot.id])
         robo_dict = {
             "id": self.behavior_robot.id,
             "orientation": np.around(self.behavior_robot.ori, decimals=2),
@@ -592,14 +571,17 @@ class Behavior(QObject):
 
         return out
 
-    def queue_command(self, command):
+    def queue_command(self, command) -> None:
         self.com_queue.put((command[0], command[1]))
 
     #
     # Commands
     #
     # region <commands>
-    def reset_fish(self, num):
+    def reset_fish(self, num) -> None:
+        """
+        Receive position reset for current fish
+        """
         self.allfish = [
             Fish(
                 id=i + 1,
@@ -631,7 +613,10 @@ class Behavior(QObject):
         if self.parameter_ui:
             self.parameter_ui.num_fish_spinbox.setValue(num)
 
-    def control_robot(self, flag):
+    def control_robot(self, flag) -> None:
+        """
+        Receive robot user control trigger
+        """
         self.behavior_robot.controlled = flag
         self.controlled = flag
         self.behavior_robot.user_controlled = flag
@@ -640,8 +625,11 @@ class Behavior(QObject):
             self.behavior_robot.max_speed = self.config["DEFAULTS"]["max_speed"]
             self.behavior_robot.stop = False
 
-    def change_robodir(self, dir):
-        # dir cannot be [0,0]
+    def change_robodir(self, dir) -> None:
+        """
+        - receives joystick input and translates it into robot direction
+        - dir cannot be [0,0]
+        """
         if not (np.abs(dir) == np.asarray([0.0, 0.0])).all():
             self.behavior_robot.stop = False
             np_dir = np.asarray(dir)
@@ -654,7 +642,10 @@ class Behavior(QObject):
             self.behavior_robot.max_speed = 0
             self.behavior_robot.stop = True
 
-    def set_next_attribute(self, robot):
+    def set_next_attribute(self, robot) -> None:
+        """
+        Receives tracked robot pose from RoboTracker
+        """
         try:
             # no robot found by robotracker
             if "no robot" in robot:
@@ -677,7 +668,10 @@ class Behavior(QObject):
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             logging.error(exc_type, fname, exc_tb.tb_lineno)
 
-    def change_zones(self, zone_dir):
+    def change_zones(self, zone_dir) -> None:
+        """
+        Change zone radii for all agents
+        """
         self.zor = zone_dir.get("zor", self.zor)
         self.zoo = zone_dir.get("zoo", self.zoo)
         self.zoa = zone_dir.get("zoa", self.zoa)
@@ -696,6 +690,9 @@ class Behavior(QObject):
         self.parameter_ui.zoa_spinbox.setValue(self.zoa)
 
     def set_zone_preset(self, size):
+        """
+        Change zone radii for all agents to preset
+        """
         if size == 0:
             self.zor = self.config["ZONE_MODES"]["SMALL"]["zor"]
             self.zoo = self.config["ZONE_MODES"]["SMALL"]["zoo"]
@@ -723,12 +720,18 @@ class Behavior(QObject):
         self.parameter_ui.zoo_spinbox.setValue(self.zoo)
         self.parameter_ui.zoa_spinbox.setValue(self.zoa)
 
-    def set_speed(self, speed):
+    def set_speed(self, speed) -> None:
+        """
+        Set speed of all fish
+        """
         for f in self.allfish:
             if f.id != 0:
                 f.max_speed = speed
 
     def challenge_status(self, toggle):
+        """
+        Receive challenge status update
+        """
         status = "started!" if toggle == 1 else "stopped!"
         logging.info(f"Challenge {status}")
 

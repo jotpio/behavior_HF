@@ -1,7 +1,6 @@
 from src.models.agent import Agent, normalize
 import numpy as np
 import math
-import time
 from datetime import datetime
 from collections import deque
 from PyQt5.QtCore import *
@@ -9,10 +8,20 @@ import logging
 from logging.handlers import TimedRotatingFileHandler
 from pathlib import Path
 from src.util.util import Util
-import os, sys
+import os
+import sys
 
 
 class Robot(Agent):
+    """
+    Robot class.
+    Inherits tick() and move() from agent class.
+    Additionally handles automatic charging and user control.
+
+    Args:
+        Agent (Agent): Base Agent class
+    """
+
     def __init__(self, arena, config):
         super().__init__(0, [1000, 1000], 90, arena, config)
 
@@ -67,8 +76,15 @@ class Robot(Agent):
 
         self.logger.warning(f"Started a new robot: {now}")
 
-    def set_attributes(self, robot):
+    def set_attributes(self, robot: dict):
+        """
+        Set robot attributes receives from RoboTracker
+
+        Args:
+            robot (dict): Tracked robot attributes
+        """
         try:
+            # charging
             self.set_charging(robot["chargingStatus"])
             self.set_voltage(robot["voltage"])
 
@@ -97,6 +113,14 @@ class Robot(Agent):
             logging.error(exc_type, fname, exc_tb.tb_lineno)
 
     def tick(self, fishpos, fishdir, dists):
+        """
+        Calculate next direction using all other agents current positions, directions and distances
+
+        Args:
+            fishpos (list): All other fish positions
+            fishdir (list): All other fish directions
+            dists (_type_): Distance matrix of all agents
+        """
         try:
             # tick only if not controlled
             if not self.controlled or not self.user_controlled:
@@ -111,9 +135,13 @@ class Robot(Agent):
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             logging.error(exc_type, fname, exc_tb.tb_lineno)
 
-    def move(self):
+    def move(self) -> None:
+        """
+        - Automated movement: Apply calculated directions from tick method
+        - User controlled: Apply user controlled direction
+        """
         try:
-            # # don't move elsewhere if charging or going to charging station
+            # don't move elsewhere if charging or going to charging station
             # if self.charging or self.go_to_charging_station:
             #     return
 
@@ -123,10 +151,6 @@ class Robot(Agent):
                 new_pos = self.pos + (self.new_dir * self.max_speed)
                 # set next target in pixel coordinates
                 self.target_px = self.pos + (self.new_dir * 200)
-
-                # print(
-                #   f"ROBOT: new px target: {self.target_px} check if outside of arena!!!!"
-                # )
 
                 # check if next target would be outside arena and update new_dir if its not
                 inside = self.check_inside_arena(self.target_px)
@@ -209,11 +233,15 @@ class Robot(Agent):
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             logging.error(exc_type, fname, exc_tb.tb_lineno)
 
-    def set_voltage(self, voltage):
+    def set_voltage(self, voltage: float):
+        """
+        Set current voltage and check for charge status
+
+        Args:
+            voltage (float): Received voltage from RoboTracker
+        """
         try:
-
             if voltage > 0:
-
                 # first time voltage receive
                 if self.old_voltage is None:
                     self.old_voltage = voltage
@@ -241,7 +269,6 @@ class Robot(Agent):
                 time_delta2 = curr_time - self.last_second_volt_msg_time
                 delta_secs = np.floor(time_delta2.total_seconds())
                 if delta_secs > 0:
-
                     self.old_voltages_second_queue.append(self.voltage)
                     self.last_second_volt_msg_time = curr_time
 
@@ -258,7 +285,13 @@ class Robot(Agent):
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             logging.error(exc_type, fname, exc_tb.tb_lineno)
 
-    def set_charging(self, is_charging):
+    def set_charging(self, is_charging: bool):
+        """
+        Sets the charging status received from RoboTracker
+
+        Args:
+            is_charging (bool): Received charging status from RoboTracker
+        """
         try:
             self.charging = is_charging
 
@@ -273,13 +306,11 @@ class Robot(Agent):
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             logging.error(exc_type, fname, exc_tb.tb_lineno)
 
-    def check_if_full(self):
+    def check_if_full(self) -> None:
+        """Check if fully charged"""
         # if voltage constant for x minutes
         voltage_list_min = list(self.old_voltages_minute_queue)
         voltage_list_sec = list(self.old_voltages_second_queue)
-
-        # print(f"ROBOT minute voltage list: {voltage_list_min}")
-        # print(f"ROBOT second voltage list: {voltage_list_sec}")
 
         # check if voltage x minutes ago the same as current or voltage larger than 8.5
         if (
@@ -303,7 +334,8 @@ class Robot(Agent):
             # print("Robot is fully charged (gradient)")
             self.full_charge = True
 
-    def check_if_low_charge(self):
+    def check_if_low_charge(self) -> None:
+        """ """
         try:
             if self.voltage < self.min_voltage and not self.charging:
                 logging.info("ROBOT: LOW CHARGE")
@@ -317,8 +349,12 @@ class Robot(Agent):
             logging.error(exc_type, fname, exc_tb.tb_lineno)
 
     def set_robot(self, robot):
-        try:
+        """Set new robot
 
+        Args:
+            robot (dict): New robot attributes
+        """
+        try:
             self.real_robot = robot
             if robot:
                 self.uid = robot["uid"]
@@ -336,7 +372,15 @@ class Robot(Agent):
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             logging.error(exc_type, fname, exc_tb.tb_lineno)
 
-    def check_inside_arena(self, next_pos):
+    def check_inside_arena(self, next_pos) -> bool:
+        """Check if position is inside arena and correct direction if not
+
+        Args:
+            next_pos (list): Position as [X,Y]
+
+        Returns:
+            bool: True: inside of arena; False: outside of arena 
+        """
         # check if fish would go out of arena and correct direction if so
         next_pos_point = QPointF(next_pos[0], next_pos[1])
         arena_rect = self.arena.rect
@@ -363,3 +407,4 @@ class Robot(Agent):
             elif id_closest_arena_p == 3:
                 self.new_dir = np.asarray([1.0, 0.0])  # go right
             return False
+        return True

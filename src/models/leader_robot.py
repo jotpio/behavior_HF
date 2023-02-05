@@ -21,7 +21,7 @@ class LeaderRobot(Agent):
 
         self.controlled = config["ROBOT"]["controlled_from_start"]
         self.debug = False
-        
+
         self.new_dir = np.asarray([0.00001, 0])
         self.real_robot = False
         self.target_px = [0, 0]
@@ -91,13 +91,11 @@ class LeaderRobot(Agent):
                 self.arena_points = self.arena.getNearestArenaPoints(new_pos)
 
                 # if real robot don't go too close to wall
-                if (
-                    self.real_robot
-                ):
+                if self.real_robot:
                     for idx, point in enumerate(self.arena_points):  # arena points
                         if point[1] < self.arena_repulsion:
                             logging.info(f"ROBOT: close point - {point[0]}")
-                            
+
                             if idx == 0:
                                 self.new_dir = np.asarray([0.0, 1.0])  # go down
                             # right edge
@@ -129,9 +127,7 @@ class LeaderRobot(Agent):
 
             # automatic movement if not in controlled state
             else:
-                if (
-                    self.real_robot is not None
-                ):
+                if self.real_robot is not None:
                     # new position is old position plus new direction vector times speed
                     new_pos = self.pos + (self.new_dir * self.max_speed)
                     # set next target in pixel coordinates
@@ -158,7 +154,7 @@ class LeaderRobot(Agent):
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             logging.error(exc_type, fname, exc_tb.tb_lineno)
 
-    def check_inside_arena(self, next_pos):
+    def check_inside_arena(self, next_pos) -> bool:
         # check if fish would go out of arena and correct direction if so
         next_pos_point = QPointF(next_pos[0], next_pos[1])
         arena_rect = self.arena.rect
@@ -185,3 +181,4 @@ class LeaderRobot(Agent):
             elif id_closest_arena_p == 3:
                 self.new_dir = np.asarray([1.0, 0.0])  # go right
             return False
+        return True

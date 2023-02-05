@@ -62,6 +62,14 @@ class Agent:
         self.half_vision_cos = np.cos(np.radians(self.vision_angle / 2))
 
     def tick(self, fishpos, fishdir, dists):
+        """
+        Calculate next direction using all other agents current positions, directions and distances
+
+        Args:
+            fishpos (list): All other fish positions
+            fishdir (list): All other fish directions
+            dists (_type_): Distance matrix of all agents
+        """
         try:
             #
             # preparations
@@ -247,7 +255,6 @@ class Agent:
                 # clip direction to move only by max turn rate
                 #
                 if np.abs(curr_turn_angle) > self.max_turn_rate * self.time_step:
-
                     clipped_turn_angle = np.radians(
                         np.sign(curr_turn_angle) * self.max_turn_rate * self.time_step
                     )
@@ -286,6 +293,7 @@ class Agent:
             logging.error(exc_type, fname, exc_tb.tb_lineno)
 
     def move(self):
+        """Apply next directions calculated in tick method"""
         try:
             # new position is old position plus new direction vector times speed
             new_pos = self.pos + (self.new_dir * self.max_speed)
@@ -307,9 +315,15 @@ class Agent:
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             logging.error(exc_type, fname, exc_tb.tb_lineno)
 
-        # print(pos, self.pos)
+    def check_inside_arena(self, next_pos) -> bool:
+        """Check if position is inside arena and correct direction if not
 
-    def check_inside_arena(self, next_pos):
+        Args:
+            next_pos (list): Position [X,Y]
+
+        Returns:
+            bool: True: inside of arena; False: outside of arena
+        """
         # check if fish would go out of arena and correct direction if so
         next_pos_point = QPointF(next_pos[0], next_pos[1])
         arena_rect = self.arena.rect
@@ -319,8 +333,7 @@ class Agent:
             # set pos to nearest arena wall (the one that was crossed)
             self.arena_points = np.asarray(self.arena_points, dtype=object)
             id_closest_arena_p = np.argmin(self.arena_points[:, 1])
-            # self.pos = self.arena_points[id_closest_arena_p][0]
-            # print(id_closest_arena_p)
+
             # set new dir parallel to closest arena wall
 
             # top edge
@@ -348,6 +361,7 @@ class Agent:
                 elif self.new_dir[0] < 0 and self.new_dir[1] <= 0:
                     self.new_dir = np.asarray([0.0, -1.0])  # go up
             return False
+        return True
 
     def change_zones(self, zor=None, zoo=None, zoa=None):
         if zor:
@@ -363,24 +377,8 @@ def check_in_vision(half_vision_cos, dir_norm, pos, point):
     between_v = np.asarray(point) - pos
     between_v_norm = between_v / np.linalg.norm(between_v.astype(np.float64))
     dot = np.dot(between_v_norm, dir_norm)
-    # deg_angle = np.degrees(np.arccos(dot))
-    # print(deg_angle)
     if dot <= half_vision_cos:
-        # print(f"not in vision - dot {dot}")
         return False
-    # else:
-    #     print(f"in vision - dot {dot}")
-    # if deg_angle > 300 / 2:
-    #     print(f"not in vision - angle {deg_angle}")
-
-    #     if dot < 300:
-    #         # print("not dot")
-    #         pass
-    #     else:
-    #         # print("dot")
-    #         pass
-    #     return False
-    # print(f"in vision - angle {deg_angle}")
     return True
 
 
@@ -473,7 +471,7 @@ def normalize(v):
     vector magnitude cannot be 0!
     from: https://stackoverflow.com/questions/2850743/numpy-how-to-quickly-normalize-many-vectors
     """
-    magnitudes = np.sqrt((v ** 2).sum(-1))
+    magnitudes = np.sqrt((v**2).sum(-1))
     if v.ndim > 1:
         magnitudes = np.expand_dims(magnitudes, 1)
     # check if magnitudes nan or 0

@@ -53,7 +53,6 @@ class RobotCommandListenerServer(ServerListenerThread):
 
                         # send received message
                         try:
-
                             message = "received"
                             self.conn.sendall(message.encode("utf-8"))
                         except:

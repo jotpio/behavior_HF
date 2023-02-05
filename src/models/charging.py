@@ -11,14 +11,30 @@ except:
     print("CHARGING: no RT found")
 
 import numpy as np
-import sys, os
+import sys
+import os
 import logging
 
 
 def charging_routine(
     behavior_robot, curr_action, charger_pos, network_controller, charger_target
 ):
+    """Implements the automatic charging routine.
+    (1) check if currently charging and not full -> halt robot
+    (2) check if fully charged and at ch. station -> drive away from charging station
+    (3) check if voltage low  and not charging -> go to charging station
+    else: do nothing
 
+    Args:
+        behavior_robot (_type_): _description_
+        curr_action (_type_): _description_
+        charger_pos (_type_): _description_
+        network_controller (_type_): _description_
+        charger_target (_type_): _description_
+
+    Returns:
+        _type_: _description_
+    """
     try:
         action = []
 
@@ -38,7 +54,6 @@ def charging_routine(
 
         # done with charging: go away from charging port
         if behavior_robot.full_charge:
-
             behavior_robot.go_to_charging_station = False
 
             close_to_ch_st = check_if_close_to_charging_station(
@@ -57,7 +72,6 @@ def charging_routine(
                     return action
             # check if near charging station (for example at startup if full)
             elif close_to_ch_st:
-
                 logging.info(
                     "CHARGING: Too close to charging station rotate until facing into tank"
                 )
@@ -73,15 +87,6 @@ def charging_routine(
                     ]
                     return action
 
-                # # if at right orientation drive backwards until not close to charging station anymore
-                # elif right_rot and not curr_action:
-                #     logging.info(
-                #         "CHARGING: Robot fully charged and at right orientation, driving backwards..."
-                #     )
-                #     action = [
-                #         ["direct", [behavior_robot.uid, 0, -5.0, -5.0]],
-                #     ]
-                #     return action
             else:
                 # network_controller.charge_command.emit(
                 #     {"command": "done charging", "args": [0]}
@@ -126,7 +131,6 @@ def charging_routine(
             # check rotation
             rot = behavior_robot.ori
             right_rot = np.abs(rot) < 8
-            # logging.info(rot)
 
             # rotate until correct orientation
             if not right_rot and not curr_action:
@@ -145,10 +149,6 @@ def charging_routine(
                 right_posx = False
 
             if not right_posx and not curr_action:
-                # charger_pos = self.config["CHARGER"]["position"]
-                # target = charger_pos[0], charger_pos[1]
-                # target = self.util.map_px_to_cm(target)
-
                 # drive slowly towards charger
                 action = [
                     ["direct", [behavior_robot.uid, 0, 4.0, 4.0]],

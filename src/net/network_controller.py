@@ -11,6 +11,7 @@ from src.models.robot import Robot
 
 
 class NetworkController(QObject):
+    """Creates and handles all network connections"""
 
     update_positions = pyqtSignal(list, name="update_positions")
     update_ellipses = pyqtSignal(Robot, list, name="update_ellipses")

@@ -1,10 +1,10 @@
 DEBUG:
   console: false
-  visualisation: True
-  optimisation: false
-  optimisation_individual : false
+  visualisation: True # opens a debug visualization window
+  optimisation: false # shows execution time for some functions
+  optimisation_individual: false # shows execution time for some agent functions
   debug_charging: false
-  
+
   #network dummies
   #dummy_joystick_client: false
 
@@ -18,7 +18,7 @@ DEFAULTS:
 
   error_deg: 10
   max_speed: 6
-  max_turn_rate: 200  #per second
+  max_turn_rate: 200 #per second
 
   time_step: 0.05 #0.05 = 20fps
   heartbeat_path: E:/git_repos/robotracker/behavior_HF_dummy/heartbeat/RTLog.txt
@@ -42,18 +42,18 @@ NETWORK:
 
 CHARGER:
   #position: [94, 1820]
-  position: [1950,200]
+  position: [1950, 200]
 
 ROBOT:
   controlled_from_start: false
-  
+
   max_voltage: 8.5
   min_voltage: 7.4
   mean_voltage_full: 8.2
   charging_history_length: 10 #in minutes
-  
+
   arena_repulsion: 300
-  max_turn_rate: 800  #per second
+  max_turn_rate: 800 #per second
   error_deg: 1
 
   zor: 1
@@ -77,11 +77,11 @@ ZONE_MODES:
 LOGGING:
   #ROBOT: '/home/user1/RoboTracker_HF/logs/robot/robot'
   #ROBOT: '/home/hf-robofish/Desktop/robot'
-  ROBOT: 'E:/git_repos/robotracker/behavior_HF_dummy/logs/robot/robot'
-  INPUT: 'E:/git_repos/robotracker/behavior_HF_dummy/logs/user_input/user_input'
-  FISH: 'E:/git_repos/robotracker/behavior_HF_dummy/logs/fish/fish'
-  BEHAVIOR: 'E:/git_repos/robotracker/behavior_HF_dummy/logs/behavior_prints/behavior_prints'
+  ROBOT: "E:/git_repos/robotracker/behavior_HF_dummy/logs/robot/robot"
+  INPUT: "E:/git_repos/robotracker/behavior_HF_dummy/logs/user_input/user_input"
+  FISH: "E:/git_repos/robotracker/behavior_HF_dummy/logs/fish/fish"
+  BEHAVIOR: "E:/git_repos/robotracker/behavior_HF_dummy/logs/behavior_prints/behavior_prints"
 
 SHUTDOWN:
-  PATH: 'E:/git_repos/robotracker/behavior_HF_dummy/heartbeat/shutdown_trigger'
-  CHARGING_PATH: 'E:/git_repos/robotracker/behavior_HF_dummy/heartbeat/shutdown_charging'
+  PATH: "E:/git_repos/robotracker/behavior_HF_dummy/heartbeat/shutdown_trigger"
+  CHARGING_PATH: "E:/git_repos/robotracker/behavior_HF_dummy/heartbeat/shutdown_charging"

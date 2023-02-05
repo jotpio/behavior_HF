@@ -4,10 +4,19 @@ import numpy as np
 from src.models.arena import Arena
 from src.models.agent import Agent
 from PyQt5.QtCore import *
-import time
 
 
 class Fish(Agent):
+    """
+    Fish class.
+    Inherits tick() and move() from agent class.
+    Additionally handles checking if it follows the robot.
+
+
+    Args:
+        Agent (Agent): Parent base class
+    """
+
     def __init__(
         self,
         id,
@@ -32,6 +41,12 @@ class Fish(Agent):
         )
 
     def check_following(self, robot_pos, robot_dir):
+        """Check if fish follows robot
+
+        Args:
+            robot_pos (list): Current robot position
+            robot_dir (list): Current robot direction
+        """
         try:
             # robot in attaction zone
             if self.influenced_by_robot:
@@ -55,7 +70,7 @@ class Fish(Agent):
                     self.following = True
                     return
             self.following = False
-        except Exception as e:
+        except Exception:
             logging.error("FISH: Error while following check")
             exc_type, exc_obj, exc_tb = sys.exc_info()
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]

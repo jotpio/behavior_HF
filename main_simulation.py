@@ -1,29 +1,15 @@
 import threading
-import sys
 
-# from src.net.TCPDummyServer import TCPDummyServer
-# from src.net.TCPClient import TCPClient
+from PyQt5.QtCore import Qt
 from src.simulation import Behavior
 from src.ui.debug_visualization import DebugVisualization
-from PyQt5.QtWidgets import (
-    QGraphicsEllipseItem,
-    QLayout,
-    QVBoxLayout,
-    QHBoxLayout,
-    QPushButton,
-    QSpinBox,
-    QLabel,
-    QApplication,
-    QWidget,
-)
-from PyQt5.QtCore import *
 
 import yaml
 from pathlib import Path
 
 
 class Main:
-    def __init__(self):
+    def __init__(self) -> None:
         # load config file
         path = Path(__file__).parent
         self.config = yaml.safe_load(open(path / "cfg/config.yml"))
